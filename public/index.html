@@ -18,10 +18,10 @@
   <div id="site-header"></div>
 
   <main>
-    <!-- CARRUSEL DE BANNERS: solo se muestra si el jefe subio banners
-         REALES desde el panel (pensados para ocupar todo el ancho). Ver
-         home.js: decide cual de las dos secciones mostrar. -->
-    <section class="container mt-3" id="hero-carousel-wrap" hidden>
+    <!-- CARRUSEL DE BANNERS: si el jefe subio banners desde el panel, se
+         muestran rotando aca; si no hay ninguno, se arma un banner de
+         respaldo con el titulo/subtitulo configurado en "Configuracion". -->
+    <section class="container mt-3">
       <!-- Sin data-bs-ride: se inicializa a mano en js/pages/home.js DESPUES
            de insertar las slides (ver comentario ahi), porque recien se
            conocen cuando llega la respuesta de la API. -->
@@ -34,27 +34,6 @@
         <button class="carousel-control-next" type="button" data-bs-target="#hero-carousel" data-bs-slide="next">
           <span class="carousel-control-next-icon"></span>
         </button>
-      </div>
-    </section>
-
-    <!-- HERO SIMPLE (respaldo): se usa mientras no haya banners reales
-         subidos. Ademas de titulo/subtitulo, si el jefe subio una "Imagen
-         del Hero" se muestra en una caja acotada al costado (no estirada a
-         todo el ancho) - asi se ve bien sea un logo cuadrado, un isotipo o
-         cualquier otra forma de imagen. -->
-    <section class="hero-malmoq" id="hero-simple" hidden>
-      <div class="container">
-        <div class="row align-items-center g-4">
-          <div class="col-lg-6">
-            <h1 id="hero-titulo">Todo para tus mejores momentos</h1>
-            <p class="lead" id="hero-subtitulo">Encuentra tus bebidas favoritas en MALMOQ.</p>
-            <div class="d-flex gap-2 flex-wrap mt-3">
-              <a href="/productos.html" class="btn btn-light btn-lg fw-bold">Comprar ahora</a>
-              <a href="/productos.html?soloPromo=1" class="btn btn-outline-light btn-lg fw-bold">Ver promociones</a>
-            </div>
-          </div>
-          <div class="col-lg-6 text-center" id="hero-simple-imagen-wrap"></div>
-        </div>
       </div>
     </section>
 
