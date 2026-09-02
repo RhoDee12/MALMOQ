@@ -90,16 +90,18 @@ a:hover {
 .malmoq-navbar {
   background-color: var(--malmoq-blanco);
   box-shadow: var(--sombra);
-  padding: 0.6rem 0;
+  padding: 0.9rem 0; /* aire arriba/abajo para que el logo no quede pegado al borde */
 }
 .malmoq-navbar .navbar-brand {
   font-weight: 900;
   letter-spacing: 1px;
   color: var(--malmoq-rojo);
   font-size: 1.5rem;
+  display: flex;
+  align-items: center;
 }
 .malmoq-navbar .navbar-brand img {
-  height: 100px;
+  height: 64px;
   width: auto;
 }
 .malmoq-navbar .nav-link {
