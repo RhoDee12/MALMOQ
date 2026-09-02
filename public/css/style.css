@@ -402,8 +402,11 @@ a:hover {
   display: flex;
   gap: 0.9rem;
   overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  scroll-behavior: smooth;
+  /* Sin scroll-snap ni scroll-behavior:smooth a proposito: el avance
+     automatico mueve el scroll el mismo de forma continua cuadro a cuadro
+     (ver public/js/carousel.js) - el snap/smooth del navegador competiria
+     con eso y se veria con tirones. Al arrastrar con el mouse/dedo el
+     usuario igual puede moverlo libremente. */
   padding-bottom: 0.6rem;
   -ms-overflow-style: none;
   scrollbar-width: none; /* Firefox */
@@ -411,7 +414,6 @@ a:hover {
 .carrusel-pista::-webkit-scrollbar { display: none; }
 
 .carrusel-pista > .carrusel-item {
-  scroll-snap-align: start;
   flex: 0 0 auto;
 }
 .carrusel-pista > .carrusel-item.item-producto { width: 190px; }

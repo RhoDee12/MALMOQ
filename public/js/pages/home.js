@@ -14,10 +14,11 @@ document.addEventListener("DOMContentLoaded", () => {
   cargarMasVendidos();
   cargarPromociones();
 
-  // Intervalos distintos para que las 3 filas no avancen todas a la vez.
-  initCarrusel("categorias-grid", "cat-prev", "cat-next", { intervalMs: 2600 });
-  initCarrusel("destacados-grid", "destacados-prev", "destacados-next", { intervalMs: 3200 });
-  initCarrusel("mas-vendidos-grid", "vendidos-prev", "vendidos-next", { intervalMs: 3800 });
+  // Velocidades levemente distintas para que las 3 filas no se sientan
+  // sincronizadas de forma robotica.
+  initCarrusel("categorias-grid", "cat-prev", "cat-next", { pxPorSegundo: 30 });
+  initCarrusel("destacados-grid", "destacados-prev", "destacados-next", { pxPorSegundo: 38 });
+  initCarrusel("mas-vendidos-grid", "vendidos-prev", "vendidos-next", { pxPorSegundo: 34 });
 });
 
 /**
@@ -92,7 +93,7 @@ async function cargarCategorias() {
       grid.innerHTML = `<p class="text-muted py-4">Aun no hay categorias.</p>`;
       return;
     }
-    grid.innerHTML = categories.map((c) => `
+    const itemsHtml = categories.map((c) => `
       <div class="carrusel-item item-categoria">
         <a href="/productos.html?categoria=${c.id}" class="categoria-circulo">
           <span class="circulo-img"><img src="${c.imageUrl || "/img/placeholder-producto.svg"}" alt="${escapeHtml(c.name)}"></span>
@@ -100,6 +101,9 @@ async function cargarCategorias() {
         </a>
       </div>
     `).join("");
+    // Se duplica el contenido (misma lista dos veces seguidas): es lo que
+    // permite el efecto de "cinta infinita" en un solo sentido, ver carousel.js.
+    grid.innerHTML = itemsHtml + itemsHtml;
   } catch (err) {
     grid.innerHTML = `<p class="text-danger py-4">No se pudieron cargar las categorias.</p>`;
   }
@@ -130,7 +134,10 @@ function renderCarruselProductos(grid, products) {
     grid.innerHTML = `<p class="text-muted py-4">Aun no hay productos para mostrar.</p>`;
     return;
   }
-  grid.innerHTML = products.map(renderProductCardCarrusel).join("");
+  const itemsHtml = products.map(renderProductCardCarrusel).join("");
+  // Duplicado a proposito (ver comentario en cargarCategorias): permite el
+  // efecto de cinta infinita en un solo sentido.
+  grid.innerHTML = itemsHtml + itemsHtml;
 }
 
 async function cargarPromociones() {
