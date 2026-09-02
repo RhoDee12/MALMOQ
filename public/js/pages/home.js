@@ -22,15 +22,18 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 /**
- * Arma el carrusel superior. Si el jefe subio banners (modulo "Banners"
- * del panel), se muestran esos, rotando. Si no hay ninguno, se arma un
- * unico slide de respaldo con el titulo/subtitulo/imagen del Hero
- * (modulo "Configuracion > General").
+ * Decide y arma cual de las DOS secciones del hero se muestra:
+ *
+ *  - Si el jefe subio banners REALES (modulo "Banners" del panel, pensados
+ *    para ocupar todo el ancho): se muestra el carrusel a pantalla
+ *    completa, rotando.
+ *  - Si no hay ninguno: se muestra un hero simple de dos columnas (texto +
+ *    imagen en una caja acotada) usando el titulo/subtitulo/imagen de
+ *    "Configuracion > General/Imagenes". Este formato funciona bien con
+ *    CUALQUIER imagen (un logo cuadrado incluido), porque no se estira a
+ *    todo el ancho como pasaria en el carrusel.
  */
 async function cargarHeroCarousel() {
-  const itemsCont = document.getElementById("hero-carousel-items");
-  const indicadoresCont = document.getElementById("hero-carousel-indicadores");
-
   try {
     const [{ banners }, { settings }] = await Promise.all([apiFetch("/banners"), apiFetch("/configuracion")]);
 
@@ -40,41 +43,44 @@ async function cargarHeroCarousel() {
       document.getElementById("franja-oferta-wrap").hidden = false;
     }
 
-    const slides = banners.length > 0
-      ? banners.map((b) => ({
-          imageUrl: b.imageUrl,
-          title: b.title || "",
-          linkUrl: b.linkUrl || "/productos.html",
-        }))
-      : [{
-          imageUrl: settings.heroImageUrl || "/img/placeholder-producto.svg",
-          title: settings.heroTitle || "Todo para tus mejores momentos",
-          linkUrl: "/productos.html",
-        }];
-
-    itemsCont.innerHTML = slides.map((s, i) => `
-      <div class="carousel-item ${i === 0 ? "active" : ""}">
-        <a href="${s.linkUrl}">
-          <img src="${s.imageUrl}" class="banner-slide-img" alt="${escapeHtml(s.title)}"
-               onerror="this.onerror=null;this.src='/img/placeholder-producto.svg';">
-        </a>
-        ${s.title ? `<div class="banner-caption"><h2>${escapeHtml(s.title)}</h2></div>` : ""}
-      </div>
-    `).join("");
-
-    if (slides.length > 1) {
-      indicadoresCont.innerHTML = slides.map((_, i) =>
-        `<button type="button" data-bs-target="#hero-carousel" data-bs-slide-to="${i}" class="${i === 0 ? "active" : ""}"></button>`
-      ).join("");
-    }
-
     if (settings.deliveryMinOrder > 0) {
       document.getElementById("info-delivery").textContent =
         `Pedido minimo para delivery: S/ ${settings.deliveryMinOrder.toFixed(2)}. Elige recojo en tienda o delivery a tu direccion al momento de comprar.`;
     }
+
+    if (banners.length > 0) {
+      armarCarruselDeBanners(banners);
+    } else {
+      armarHeroSimple(settings);
+    }
   } catch (err) {
     console.error("No se pudo cargar el carrusel principal:", err);
-    itemsCont.innerHTML = `<div class="carousel-item active"><img src="/img/placeholder-producto.svg" class="banner-slide-img" alt="MALMOQ"></div>`;
+    armarHeroSimple({}); // respaldo minimo si fallo la API: hero simple sin imagen
+  }
+}
+
+/** Arma el carrusel a pantalla completa con los banners reales subidos por el jefe. */
+function armarCarruselDeBanners(banners) {
+  document.getElementById("hero-simple").hidden = true;
+  document.getElementById("hero-carousel-wrap").hidden = false;
+
+  const itemsCont = document.getElementById("hero-carousel-items");
+  const indicadoresCont = document.getElementById("hero-carousel-indicadores");
+
+  itemsCont.innerHTML = banners.map((b, i) => `
+    <div class="carousel-item ${i === 0 ? "active" : ""}">
+      <a href="${b.linkUrl || "/productos.html"}">
+        <img src="${b.imageUrl}" class="banner-slide-img" alt="${escapeHtml(b.title || "")}"
+             onerror="this.onerror=null;this.src='/img/placeholder-producto.svg';">
+      </a>
+      ${b.title ? `<div class="banner-caption"><h2>${escapeHtml(b.title)}</h2></div>` : ""}
+    </div>
+  `).join("");
+
+  if (banners.length > 1) {
+    indicadoresCont.innerHTML = banners.map((_, i) =>
+      `<button type="button" data-bs-target="#hero-carousel" data-bs-slide-to="${i}" class="${i === 0 ? "active" : ""}"></button>`
+    ).join("");
   }
 
   // El HTML no trae "data-bs-ride" a proposito: las slides recien se
@@ -83,6 +89,23 @@ async function cargarHeroCarousel() {
   // data-bs-ride en el HTML, Bootstrap lo inicializaria apenas carga la
   // pagina con el carrusel todavia vacio, y el auto-avance no funcionaria.
   new bootstrap.Carousel(document.getElementById("hero-carousel"), { interval: 4500, ride: "carousel", wrap: true });
+}
+
+/** Arma el hero simple de dos columnas (texto + imagen acotada), sin banners. */
+function armarHeroSimple(settings) {
+  document.getElementById("hero-carousel-wrap").hidden = true;
+  document.getElementById("hero-simple").hidden = false;
+
+  document.getElementById("hero-titulo").textContent = settings.heroTitle || "Todo para tus mejores momentos";
+  document.getElementById("hero-subtitulo").textContent = settings.heroSubtitle || "Encuentra tus bebidas favoritas en MALMOQ.";
+
+  const imagenWrap = document.getElementById("hero-simple-imagen-wrap");
+  // Solo se muestra la imagen si el jefe subio una - si no hay, el hero
+  // queda solo con el texto sobre el fondo degradado (se ve limpio igual,
+  // no hace falta forzar un icono de relleno).
+  imagenWrap.innerHTML = settings.heroImageUrl
+    ? `<img src="${settings.heroImageUrl}" alt="MALMOQ" class="img-fluid">`
+    : "";
 }
 
 async function cargarCategorias() {
