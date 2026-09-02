@@ -1,0 +1,132 @@
+/* ============================================================================
+   ESTILOS DEL PANEL ADMINISTRATIVO (empleados y jefe)
+   ============================================================================
+   Archivo separado del style.css publico a proposito: el panel admin tiene
+   su propio layout (menu lateral + contenido) y no comparte navbar/hero/
+   footer de la tienda. Se carga solo en las paginas dentro de public/admin/.
+   ============================================================================ */
+
+:root {
+  --malmoq-rojo: #6c0303;
+  --malmoq-rojo-oscuro: #4a0202;
+  --malmoq-gris-claro: #f4f2f2;
+  --malmoq-borde: #e5dede;
+}
+
+body.admin-body {
+  font-family: "Montserrat", sans-serif;
+  background-color: var(--malmoq-gris-claro);
+  min-height: 100vh;
+}
+
+/* ------------------------------------------------------------- SIDEBAR --- */
+
+.admin-sidebar {
+  background-color: #1a1a1a;
+  min-height: 100vh;
+  padding: 1.2rem 0;
+}
+.admin-sidebar .brand {
+  color: #fff;
+  font-weight: 900;
+  font-size: 1.3rem;
+  padding: 0 1.2rem 1.2rem;
+  display: block;
+  border-bottom: 1px solid #333;
+  margin-bottom: 0.8rem;
+}
+.admin-sidebar .brand small {
+  display: block;
+  font-weight: 500;
+  font-size: 0.7rem;
+  color: #aaa;
+}
+.admin-sidebar a.nav-link {
+  color: #cfc7c7;
+  font-weight: 600;
+  font-size: 0.9rem;
+  padding: 0.6rem 1.2rem;
+  border-left: 3px solid transparent;
+}
+.admin-sidebar a.nav-link:hover {
+  color: #fff;
+  background-color: rgba(255, 255, 255, 0.05);
+}
+.admin-sidebar a.nav-link.active {
+  color: #fff;
+  background-color: var(--malmoq-rojo);
+  border-left-color: #fff;
+}
+.admin-sidebar .nav-section-title {
+  color: #777;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  font-weight: 700;
+  padding: 1rem 1.2rem 0.3rem;
+}
+
+/* ------------------------------------------------------------- CONTENT --- */
+
+.admin-content {
+  padding: 1.6rem 1.8rem;
+}
+.admin-topbar {
+  background: #fff;
+  border-bottom: 1px solid var(--malmoq-borde);
+  padding: 0.8rem 1.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.admin-card {
+  background: #fff;
+  border: 1px solid var(--malmoq-borde);
+  border-radius: 10px;
+  padding: 1.3rem;
+  margin-bottom: 1.3rem;
+}
+.admin-kpi {
+  background: #fff;
+  border: 1px solid var(--malmoq-borde);
+  border-radius: 10px;
+  padding: 1.1rem;
+}
+.admin-kpi .kpi-label {
+  font-size: 0.78rem;
+  color: #777;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.admin-kpi .kpi-value {
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: var(--malmoq-rojo);
+}
+.table-admin th {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  color: #777;
+  border-bottom-width: 1px;
+}
+.table-admin td {
+  vertical-align: middle;
+  font-size: 0.9rem;
+}
+.thumb-admin {
+  width: 42px;
+  height: 42px;
+  object-fit: cover;
+  border-radius: 6px;
+  background: var(--malmoq-gris-claro);
+}
+.btn-admin-primary {
+  background-color: var(--malmoq-rojo);
+  border-color: var(--malmoq-rojo);
+  color: #fff;
+  font-weight: 600;
+}
+.btn-admin-primary:hover {
+  background-color: var(--malmoq-rojo-oscuro);
+  border-color: var(--malmoq-rojo-oscuro);
+  color: #fff;
+}

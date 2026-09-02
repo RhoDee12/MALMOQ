@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carrito - MALMOQ</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+  <link href="/css/style.css" rel="stylesheet">
+</head>
+<body>
+
+  <div id="site-header"></div>
+
+  <main class="container my-4">
+    <h1 class="font-black mb-4">Tu carrito</h1>
+
+    <div id="carrito-vacio" class="text-center py-5" hidden>
+      <p class="text-muted">Tu carrito esta vacio.</p>
+      <a href="/productos.html" class="btn btn-primary">Ver productos</a>
+    </div>
+
+    <div class="row" id="carrito-contenido" hidden>
+      <div class="col-lg-8">
+        <div id="alerta-stock" class="alert alert-warning" hidden></div>
+        <table class="table align-middle">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Precio</th>
+              <th>Cantidad</th>
+              <th>Subtotal</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="carrito-items"></tbody>
+        </table>
+        <button class="btn btn-outline-danger btn-sm" id="btn-vaciar-carrito">Vaciar carrito</button>
+      </div>
+      <div class="col-lg-4">
+        <div class="border rounded-malmoq p-3">
+          <h5 class="font-semibold">Resumen</h5>
+          <div class="d-flex justify-content-between">
+            <span>Total</span>
+            <span class="font-black" id="carrito-total">S/ 0.00</span>
+          </div>
+          <small class="text-secondary d-block mb-3">El IGV y posibles comisiones se calculan en el pago.</small>
+          <a href="/checkout.html" class="btn btn-primary w-100">Continuar con la compra</a>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <div id="site-footer"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/cart.js"></script>
+  <script src="/js/product-card.js"></script>
+  <script src="/js/layout.js"></script>
+  <script src="/js/pages/carrito.js"></script>
+</body>
+</html>

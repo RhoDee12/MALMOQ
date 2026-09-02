@@ -1,0 +1,313 @@
+/* ============================================================================
+   ESTILOS GENERALES DE MALMOQ (tienda + paginas publicas)
+   ============================================================================
+   Este archivo SOLO tiene estilos propios de MALMOQ (colores de marca,
+   tipografia, layout de componentes especificos). Bootstrap se carga aparte
+   por CDN en cada HTML (ver <head> de cada pagina) y se usa para la grilla,
+   botones base, formularios, etc. - no se reescribe nada que Bootstrap ya
+   resuelva bien.
+
+   Paleta e identidad (ver brief de MALMOQ):
+     - Rojo vino:  #6C0303  (color principal de marca)
+     - Blanco:     #FFFFFF
+     - Negro/grises: texto y elementos secundarios
+     - Tipografia: Montserrat (pesos 400, 500, 600, 700, 900)
+   ============================================================================ */
+
+:root {
+  --malmoq-rojo: #6c0303;
+  --malmoq-rojo-oscuro: #4a0202;
+  --malmoq-rojo-claro: #8a1a1a;
+  --malmoq-blanco: #ffffff;
+  --malmoq-negro: #1a1a1a;
+  --malmoq-gris-oscuro: #3a3a3a;
+  --malmoq-gris: #6b6b6b;
+  --malmoq-gris-claro: #f4f2f2;
+  --malmoq-borde: #e5dede;
+
+  --fuente: "Montserrat", sans-serif;
+  --radio: 10px;
+  --sombra: 0 4px 18px rgba(0, 0, 0, 0.08);
+}
+
+/* -------------------------------------------------------------- BASE ----- */
+
+html, body {
+  height: 100%;
+}
+
+body {
+  font-family: var(--fuente);
+  font-weight: 400;
+  color: var(--malmoq-negro);
+  background-color: var(--malmoq-blanco);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+main {
+  flex: 1; /* empuja el footer al fondo aunque la pagina tenga poco contenido */
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--fuente);
+  font-weight: 700;
+}
+
+a {
+  color: var(--malmoq-rojo);
+  text-decoration: none;
+}
+a:hover {
+  color: var(--malmoq-rojo-oscuro);
+}
+
+/* Sobrescribe el color "primary" de Bootstrap por el rojo vino de MALMOQ. */
+.btn-primary {
+  --bs-btn-bg: var(--malmoq-rojo);
+  --bs-btn-border-color: var(--malmoq-rojo);
+  --bs-btn-hover-bg: var(--malmoq-rojo-oscuro);
+  --bs-btn-hover-border-color: var(--malmoq-rojo-oscuro);
+  --bs-btn-active-bg: var(--malmoq-rojo-oscuro);
+  --bs-btn-active-border-color: var(--malmoq-rojo-oscuro);
+  font-weight: 600;
+}
+.btn-outline-primary {
+  --bs-btn-color: var(--malmoq-rojo);
+  --bs-btn-border-color: var(--malmoq-rojo);
+  --bs-btn-hover-bg: var(--malmoq-rojo);
+  --bs-btn-hover-border-color: var(--malmoq-rojo);
+  font-weight: 600;
+}
+.text-malmoq { color: var(--malmoq-rojo) !important; }
+.bg-malmoq { background-color: var(--malmoq-rojo) !important; }
+
+/* ------------------------------------------------------------ NAVBAR ----- */
+
+.malmoq-navbar {
+  background-color: var(--malmoq-blanco);
+  box-shadow: var(--sombra);
+  padding: 0.6rem 0;
+}
+.malmoq-navbar .navbar-brand {
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: var(--malmoq-rojo);
+  font-size: 1.5rem;
+}
+.malmoq-navbar .navbar-brand img {
+  height: 42px;
+  width: auto;
+}
+.malmoq-navbar .nav-link {
+  font-weight: 600;
+  color: var(--malmoq-gris-oscuro);
+}
+.malmoq-navbar .nav-link:hover,
+.malmoq-navbar .nav-link.active {
+  color: var(--malmoq-rojo);
+}
+.malmoq-navbar .cart-badge {
+  position: absolute;
+  top: -6px;
+  right: -10px;
+  font-size: 0.65rem;
+}
+
+/* -------------------------------------------------------------- HERO ----- */
+
+.hero-malmoq {
+  background: linear-gradient(120deg, var(--malmoq-rojo) 0%, var(--malmoq-rojo-oscuro) 100%);
+  color: var(--malmoq-blanco);
+  padding: 4.5rem 0;
+  border-radius: 0 0 2rem 2rem;
+}
+.hero-malmoq h1 {
+  font-weight: 900;
+  font-size: clamp(1.9rem, 4vw, 3rem);
+}
+.hero-malmoq p.lead {
+  font-weight: 500;
+  opacity: 0.95;
+}
+.hero-malmoq img {
+  border-radius: var(--radio);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+}
+
+/* --------------------------------------------------------- CATEGORIAS ---- */
+
+.categoria-card {
+  border: 1px solid var(--malmoq-borde);
+  border-radius: var(--radio);
+  text-align: center;
+  padding: 1.2rem 0.5rem;
+  background: var(--malmoq-blanco);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  height: 100%;
+}
+.categoria-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--sombra);
+}
+.categoria-card img {
+  height: 64px;
+  width: 64px;
+  object-fit: cover;
+  border-radius: 50%;
+  margin: 0 auto 0.6rem;
+  background: var(--malmoq-gris-claro);
+}
+.categoria-card span {
+  display: block;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--malmoq-gris-oscuro);
+}
+
+/* ----------------------------------------------------------- PRODUCTOS --- */
+
+.producto-card {
+  border: 1px solid var(--malmoq-borde);
+  border-radius: var(--radio);
+  overflow: hidden;
+  background: var(--malmoq-blanco);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+.producto-card:hover {
+  box-shadow: var(--sombra);
+  transform: translateY(-3px);
+}
+.producto-card .producto-img-wrap {
+  aspect-ratio: 1 / 1;
+  background: var(--malmoq-gris-claro);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.producto-card .producto-img-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.producto-card .producto-body {
+  padding: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.producto-card .producto-marca {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  color: var(--malmoq-gris);
+  font-weight: 600;
+}
+.producto-card .producto-nombre {
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin: 0.1rem 0 0.4rem;
+  flex: 1;
+}
+.producto-card .precio-actual {
+  font-weight: 800;
+  color: var(--malmoq-rojo);
+  font-size: 1.15rem;
+}
+.producto-card .precio-tachado {
+  text-decoration: line-through;
+  color: var(--malmoq-gris);
+  font-size: 0.85rem;
+  margin-left: 0.4rem;
+}
+.badge-promo {
+  background-color: var(--malmoq-rojo);
+}
+.badge-stock-bajo {
+  background-color: #b45309;
+}
+.badge-agotado {
+  background-color: var(--malmoq-gris);
+}
+
+/* --------------------------------------------------------------- FOOTER -- */
+
+.malmoq-footer {
+  background-color: var(--malmoq-negro);
+  color: #d9d0d0;
+  padding: 2.5rem 0 1.2rem;
+  margin-top: 3rem;
+}
+.malmoq-footer h5 {
+  color: var(--malmoq-blanco);
+  font-weight: 700;
+  margin-bottom: 0.8rem;
+}
+.malmoq-footer a {
+  color: #d9d0d0;
+}
+.malmoq-footer a:hover {
+  color: var(--malmoq-blanco);
+}
+.malmoq-footer .footer-bottom {
+  border-top: 1px solid #3a3a3a;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  font-size: 0.8rem;
+  color: #999;
+}
+
+/* ---------------------------------------------------------- WHATSAPP ----- */
+
+.whatsapp-float {
+  position: fixed;
+  bottom: 22px;
+  right: 22px;
+  background-color: #25d366;
+  color: #fff;
+  border-radius: 50%;
+  width: 58px;
+  height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.7rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  z-index: 1030;
+}
+.whatsapp-float:hover {
+  background-color: #1ebe5b;
+  color: #fff;
+}
+
+/* ------------------------------------------------------------ CARRITO ---- */
+
+.carrito-item img {
+  width: 70px;
+  height: 70px;
+  object-fit: cover;
+  border-radius: 8px;
+  background: var(--malmoq-gris-claro);
+}
+
+/* ---------------------------------------------------- FORMULARIOS AUTH --- */
+
+.auth-card {
+  max-width: 440px;
+  margin: 3rem auto;
+  border: 1px solid var(--malmoq-borde);
+  border-radius: var(--radio);
+  padding: 2rem;
+  box-shadow: var(--sombra);
+}
+
+/* --------------------------------------------------------- UTILIDADES ---- */
+
+.font-black { font-weight: 900; }
+.font-semibold { font-weight: 600; }
+.rounded-malmoq { border-radius: var(--radio); }
+.spinner-malmoq { color: var(--malmoq-rojo); }

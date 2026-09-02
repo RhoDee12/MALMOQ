@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Banners - Panel MALMOQ</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+  <link href="/css/admin.css" rel="stylesheet">
+</head>
+<body class="admin-body" data-page-title="Banners">
+
+  <div id="admin-shell"></div>
+
+  <template id="admin-page-content">
+    <div class="admin-card">
+      <h5 class="font-semibold mb-3">Nuevo banner</h5>
+      <form id="form-banner" class="row g-2">
+        <div class="col-md-3">
+          <label class="form-label small">Imagen</label>
+          <input type="file" accept="image/*" class="form-control form-control-sm" id="banner-imagen" required>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small">Titulo (opcional)</label>
+          <input type="text" class="form-control form-control-sm" id="banner-titulo">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label small">Enlace (opcional)</label>
+          <input type="text" class="form-control form-control-sm" id="banner-link">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small">Orden</label>
+          <input type="number" class="form-control form-control-sm" id="banner-orden" value="0">
+        </div>
+        <div class="col-md-1 d-flex align-items-end">
+          <button type="submit" class="btn btn-admin-primary btn-sm">Crear</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="row g-3" id="grid-banners"></div>
+  </template>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/admin/admin-layout.js"></script>
+  <script src="/js/admin/pages/banners.js"></script>
+</body>
+</html>

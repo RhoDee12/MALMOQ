@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Productos - Panel MALMOQ</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+  <link href="/css/admin.css" rel="stylesheet">
+</head>
+<body class="admin-body" data-page-title="Productos">
+
+  <div id="admin-shell"></div>
+
+  <template id="admin-page-content">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <input type="search" class="form-control form-control-sm w-auto" id="buscar-producto" placeholder="Buscar producto...">
+      <button class="btn btn-admin-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modal-producto" onclick="abrirModalNuevoProducto()">+ Nuevo producto</button>
+    </div>
+
+    <div class="admin-card p-0">
+      <div class="table-responsive">
+        <table class="table table-admin mb-0">
+          <thead>
+            <tr>
+              <th></th><th>SKU</th><th>Nombre</th><th>Categoria</th><th>Precio</th><th>Stock</th><th>Estado</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="tabla-productos"><tr><td colspan="8" class="text-center text-muted py-4">Cargando...</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- MODAL: crear / editar producto -->
+    <div class="modal fade" id="modal-producto" tabindex="-1">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <form id="form-producto">
+            <div class="modal-header">
+              <h5 class="modal-title" id="modal-producto-titulo">Nuevo producto</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+              <input type="hidden" id="p-id">
+              <div class="row g-2">
+                <div class="col-md-4">
+                  <label class="form-label small">SKU</label>
+                  <input type="text" class="form-control form-control-sm" id="p-sku" required>
+                </div>
+                <div class="col-md-8">
+                  <label class="form-label small">Nombre</label>
+                  <input type="text" class="form-control form-control-sm" id="p-nombre" required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small">Categoria</label>
+                  <select class="form-select form-select-sm" id="p-categoria" required></select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small">Marca (opcional)</label>
+                  <select class="form-select form-select-sm" id="p-marca"><option value="">Sin marca</option></select>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small">Presentacion</label>
+                  <input type="text" class="form-control form-control-sm" id="p-presentacion" placeholder="ej: botella 750ml">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small">Descripcion</label>
+                  <input type="text" class="form-control form-control-sm" id="p-descripcion">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label small">Precio (S/)</label>
+                  <input type="number" step="0.01" min="0.01" class="form-control form-control-sm" id="p-precio" required>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label small">Precio promocional (opcional)</label>
+                  <input type="number" step="0.01" min="0" class="form-control form-control-sm" id="p-precio-promo">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label small">Descuento % (opcional)</label>
+                  <input type="number" step="0.01" min="0" max="100" class="form-control form-control-sm" id="p-descuento">
+                </div>
+                <div class="col-md-6" id="grupo-stock-inicial">
+                  <label class="form-label small">Stock inicial</label>
+                  <input type="number" min="0" class="form-control form-control-sm" id="p-stock" value="0">
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small">Stock minimo (alerta)</label>
+                  <input type="number" min="0" class="form-control form-control-sm" id="p-stock-minimo" value="5">
+                </div>
+                <div class="col-12">
+                  <label class="form-label small">Imagen del producto</label>
+                  <input type="file" class="form-control form-control-sm" id="p-imagen" accept="image/*">
+                  <small class="text-secondary">La imagen se sube despues de guardar los datos.</small>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+              <button type="submit" class="btn btn-admin-primary btn-sm">Guardar producto</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="/js/api.js"></script>
+  <script src="/js/admin/admin-layout.js"></script>
+  <script src="/js/admin/pages/productos.js"></script>
+</body>
+</html>

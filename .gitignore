@@ -1,0 +1,23 @@
+# Dependencias
+node_modules/
+
+# Variables de entorno (contienen secretos: JWT_SECRET, DATABASE_URL, etc.)
+.env
+
+# Base de datos local de desarrollo (SQLite)
+prisma/dev.db
+prisma/dev.db-journal
+
+# Archivos subidos por el administrador (logo, banners, fotos de productos)
+# Se quedan solo en cada maquina / en el almacenamiento en la nube, no en git.
+public/img/uploads/*
+!public/img/uploads/.gitkeep
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sistema operativo / editor
+.DS_Store
+Thumbs.db
+.vscode/

@@ -1,0 +1,441 @@
+// ============================================================================
+// ESQUEMA DE BASE DE DATOS - MALMOQ
+// ============================================================================
+// Este archivo define TODAS las tablas del sistema y como se relacionan.
+// La base de datos es la "fuente de la verdad": productos, precios, stock,
+// pedidos, ventas, pagos e IGV viven aca, nunca hardcodeados en el frontend.
+//
+// Para desarrollar en tu maquina se usa SQLite (provider "sqlite", archivo
+// prisma/dev.db, no requiere instalar nada). Cuando quieras pasar a la nube
+// (Neon/Supabase, Postgres), cambia el provider a "postgresql" y el
+// DATABASE_URL en .env - el resto del codigo no cambia.
+// ============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ----------------------------------------------------------------------------
+// USUARIOS Y ROLES
+// ----------------------------------------------------------------------------
+
+// Un unico usuario puede ser CLIENTE, EMPLEADO o JEFE. El campo "role"
+// decide que puede hacer; el backend valida el permiso en cada endpoint
+// (nunca hay que confiar solo en lo que el frontend oculta o muestra).
+// NOTA: SQLite no soporta "enum" en Prisma, por eso "role" es String y los
+// valores permitidos ("CLIENTE" | "EMPLEADO" | "JEFE") se validan en
+// src/constants.js. Si en el futuro se migra a Postgres, se puede volver
+// a un enum real sin tocar el resto del codigo (los valores son los mismos).
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  passwordHash String // contrasena cifrada con bcrypt, nunca en texto plano
+  role         String   @default("CLIENTE")
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Datos de perfil segun el rol (uno de los dos, o ninguno si es JEFE)
+  customerProfile Customer?
+  employeeProfile Employee?
+
+  orders        Order[]
+  sales         Sale[] // ventas registradas por este usuario (si es empleado/jefe)
+  activityLogs  ActivityLog[]
+}
+
+// Datos adicionales de un usuario con rol CLIENTE.
+model Customer {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName String
+  lastName  String
+  phone     String?
+  address   String?
+  reference String? // referencia de la direccion (ej: "frente al parque")
+  createdAt DateTime @default(now())
+}
+
+// Datos adicionales de un usuario con rol EMPLEADO, incluyendo sus permisos
+// individuales (el jefe decide que modulos puede tocar cada empleado).
+model Employee {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstName String
+  lastName  String
+  phone     String?
+
+  // Permisos granulares por modulo. Se guardan como booleanos explicitos
+  // (mas simple de auditar y de mostrar en un formulario que un JSON libre).
+  canManageProducts  Boolean @default(false)
+  canManageInventory Boolean @default(true)
+  canManageOrders    Boolean @default(true)
+  canRegisterSales   Boolean @default(true)
+  canViewCustomers   Boolean @default(false)
+
+  createdAt DateTime @default(now())
+}
+
+// ----------------------------------------------------------------------------
+// CATALOGO: CATEGORIAS, MARCAS Y PRODUCTOS
+// ----------------------------------------------------------------------------
+
+model Category {
+  id          Int       @id @default(autoincrement())
+  name        String    @unique
+  slug        String    @unique
+  imageUrl    String? // se completa cuando el jefe sube la imagen real
+  sortOrder   Int       @default(0)
+  isActive    Boolean   @default(true)
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Brand {
+  id       Int       @id @default(autoincrement())
+  name     String    @unique
+  products Product[]
+}
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  sku         String   @unique
+  name        String
+  description String?
+  presentation String? // ej: "botella 750ml"
+
+  price           Float // precio de venta actual
+  promoPrice      Float? // precio promocional, si aplica (debe ser < price)
+  discountPercent Float? // alternativa: descuento en % en vez de precio fijo
+
+  stock       Int    @default(0)
+  minStock    Int    @default(5) // debajo de esto se marca "stock bajo"
+
+  imageUrl    String? // imagen principal (subida por el admin)
+  isActive    Boolean @default(true)
+
+  categoryId Int
+  category   Category @relation(fields: [categoryId], references: [id])
+  brandId    Int?
+  brand      Brand?   @relation(fields: [brandId], references: [id])
+
+  images             ProductImage[]
+  orderItems         OrderItem[]
+  saleItems          SaleItem[]
+  inventoryMovements InventoryMovement[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Imagenes adicionales de un producto (ademas de la principal).
+model ProductImage {
+  id        Int     @id @default(autoincrement())
+  productId Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  sortOrder Int     @default(0)
+}
+
+// ----------------------------------------------------------------------------
+// INVENTARIO - registro de cada movimiento de stock (auditable)
+// ----------------------------------------------------------------------------
+
+// Valores validos de "type" (ver src/constants.js):
+// ENTRADA (ingreso de mercaderia) | SALIDA (merma/uso interno) |
+// AJUSTE (correccion manual) | VENTA (descuento por venta) |
+// DEVOLUCION (reingreso por devolucion)
+model InventoryMovement {
+  id         Int          @id @default(autoincrement())
+  productId  Int
+  product    Product      @relation(fields: [productId], references: [id])
+  type       String
+  quantity   Int // siempre positivo; el "type" indica si suma o resta
+  reason     String?
+  userId     Int? // quien hizo el movimiento
+  saleId     Int? // venta asociada, si el movimiento vino de una venta
+  sale       Sale?        @relation(fields: [saleId], references: [id])
+  createdAt  DateTime     @default(now())
+}
+
+// ----------------------------------------------------------------------------
+// PEDIDOS (flujo del cliente online)
+// ----------------------------------------------------------------------------
+
+// Valores validos de "status" (ver src/constants.js): PENDIENTE |
+// PAGO_PENDIENTE | PAGO_CONFIRMADO | PREPARANDO | EN_CAMINO | LISTO_RECOJO |
+// ENTREGADO | CANCELADO
+// Valores validos de "deliveryMode": DELIVERY | RECOJO
+model Order {
+  id          Int          @id @default(autoincrement())
+  orderNumber String       @unique // ej: "PED-000001"
+  userId      Int
+  user        User         @relation(fields: [userId], references: [id])
+
+  deliveryMode String
+  address      String? // solo si es DELIVERY
+  reference    String?
+  deliveryCost Float        @default(0)
+
+  status String @default("PENDIENTE")
+
+  paymentMethodId Int
+  paymentMethod   PaymentMethod @relation(fields: [paymentMethodId], references: [id])
+
+  // Totales calculados al momento del pedido (ver src/services/pricing.service.js)
+  subtotal        Float // suma de productos sin descuento
+  discountTotal   Float @default(0)
+  taxableBase     Float // base imponible (subtotal - descuento)
+  igvPercent      Float // % de IGV usado en ESTE pedido (historico, no cambia despues)
+  igvAmount       Float
+  commissionPercent Float @default(0) // % de comision Pocket POS usado, si aplica
+  commissionAmount  Float @default(0)
+  total             Float // total final que paga el cliente
+
+  items    OrderItem[]
+  payments Payment[]
+  receipt  Receipt?
+  sale     Sale?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model OrderItem {
+  id        Int     @id @default(autoincrement())
+  orderId   Int
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId Int
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  unitPrice Float // precio al momento de la compra (no cambia si el producto sube de precio despues)
+  subtotal  Float
+}
+
+// ----------------------------------------------------------------------------
+// VENTAS - registro unificado (online Y presencial usan esta misma tabla)
+// ----------------------------------------------------------------------------
+
+// Valores validos de "channel" (ver src/constants.js): ONLINE | PRESENCIAL
+model Sale {
+  id      Int         @id @default(autoincrement())
+  channel String
+
+  orderId Int?  @unique // si viene de un pedido online
+  order   Order? @relation(fields: [orderId], references: [id])
+
+  userId Int // empleado/jefe que registro la venta (o el mismo cliente si es online)
+  user   User @relation(fields: [userId], references: [id])
+
+  subtotal          Float
+  discountTotal     Float @default(0)
+  taxableBase       Float
+  igvPercent        Float
+  igvAmount         Float
+  commissionPercent Float @default(0)
+  commissionAmount  Float @default(0)
+  total             Float
+
+  paymentMethodId Int
+  paymentMethod   PaymentMethod @relation(fields: [paymentMethodId], references: [id])
+
+  isVoided  Boolean  @default(false) // "anulada" - se conserva, nunca se borra
+  items     SaleItem[]
+  movements InventoryMovement[]
+  receipt   Receipt?
+
+  createdAt DateTime @default(now())
+}
+
+model SaleItem {
+  id        Int     @id @default(autoincrement())
+  saleId    Int
+  sale      Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  productId Int
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  unitPrice Float
+  subtotal  Float
+}
+
+// ----------------------------------------------------------------------------
+// PAGOS Y MEDIOS DE PAGO
+// ----------------------------------------------------------------------------
+
+// Configuracion de cada medio de pago. El jefe activa/desactiva y completa
+// los datos (numero, titular, QR). El % de comision de la tarjeta vive en
+// PaymentCommission (abajo), no aqui, porque debe tener historial de vigencia.
+// Valores validos de "type" (ver src/constants.js): EFECTIVO | YAPE | PLIN |
+// TARJETA_POCKET_POS
+model PaymentMethod {
+  id       Int     @id @default(autoincrement())
+  type     String  @unique
+  isActive Boolean @default(true)
+
+  // Yape / Plin
+  phoneNumber String?
+  accountHolder String?
+  qrImageUrl    String?
+
+  orders Order[]
+  sales  Sale[]
+  commissions PaymentCommission[]
+}
+
+// Comprobante de pago que adjunta el cliente (Yape/Plin) o el registro de
+// la operacion con tarjeta. Un pedido puede tener uno o mas pagos asociados.
+model Payment {
+  id        Int      @id @default(autoincrement())
+  orderId   Int
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  amount    Float
+  proofUrl  String? // captura del comprobante subida por el cliente
+  operationNumber String? // numero de operacion de Yape/Plin
+  isVerified Boolean @default(false) // el empleado/jefe lo valida manualmente
+  verifiedBy Int?
+  createdAt DateTime @default(now())
+}
+
+// Historial de porcentaje de comision del Pocket POS. NUNCA se edita un
+// registro pasado: cuando cambia el contrato, se crea una fila nueva con
+// una nueva fecha de vigencia. Cada venta guarda el % que uso en su momento
+// (Order.commissionPercent / Sale.commissionPercent), asi que cambiar esto
+// a futuro no altera ventas historicas.
+model PaymentCommission {
+  id              Int           @id @default(autoincrement())
+  paymentMethodId Int
+  paymentMethod   PaymentMethod @relation(fields: [paymentMethodId], references: [id])
+  providerName    String? // ej: "Pocket POS - proveedor X"
+  percent         Float // ej: 3.0 = 3%
+  validFrom       DateTime      @default(now())
+  validTo         DateTime? // null = vigente hasta que se cree una nueva
+  createdAt       DateTime      @default(now())
+}
+
+// ----------------------------------------------------------------------------
+// COMPROBANTES (boletas) Y SERIES/CORRELATIVOS
+// ----------------------------------------------------------------------------
+
+model ReceiptSeries {
+  id          Int    @id @default(autoincrement())
+  series      String @unique // ej: "B001"
+  lastNumber  Int    @default(0) // ultimo correlativo emitido
+}
+
+model Receipt {
+  id         Int      @id @default(autoincrement())
+  series     String
+  number     Int
+  fullNumber String   @unique // ej: "B001-00000001"
+
+  orderId Int?    @unique
+  order   Order?  @relation(fields: [orderId], references: [id])
+  saleId  Int?    @unique
+  sale    Sale?   @relation(fields: [saleId], references: [id])
+
+  // Snapshot de datos tributarios y del cliente al momento de emitir,
+  // para que la boleta no cambie si despues se edita la config o el cliente.
+  customerName String
+  customerDoc  String?
+  companyRuc   String
+  companyName  String
+  total        Float
+
+  pdfUrl    String? // se completa cuando se genera el PDF
+  createdAt DateTime @default(now())
+}
+
+// ----------------------------------------------------------------------------
+// PROMOCIONES Y BANNERS (contenido administrable de la tienda)
+// ----------------------------------------------------------------------------
+
+model Promotion {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String?
+  imageUrl    String?
+  startDate   DateTime?
+  endDate     DateTime?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model Banner {
+  id        Int     @id @default(autoincrement())
+  imageUrl  String
+  title     String?
+  linkUrl   String?
+  sortOrder Int     @default(0)
+  isActive  Boolean @default(true)
+}
+
+// ----------------------------------------------------------------------------
+// ZONAS DE DELIVERY
+// ----------------------------------------------------------------------------
+
+model DeliveryZone {
+  id        Int     @id @default(autoincrement())
+  name      String
+  cost      Float
+  isFree    Boolean @default(false)
+  isActive  Boolean @default(true)
+}
+
+// ----------------------------------------------------------------------------
+// CONFIGURACION GENERAL DEL SITIO (fila unica, id=1)
+// ----------------------------------------------------------------------------
+// Guarda todo lo que el jefe puede personalizar sin tocar codigo: contenido
+// del Home, datos tributarios (IGV, RUC), logo/favicon, WhatsApp, etc.
+model SiteSettings {
+  id Int @id @default(1)
+
+  // Identidad / imagenes (rutas dentro de public/img/uploads, el admin las sube)
+  logoUrl    String?
+  faviconUrl String?
+
+  // Contenido del Hero (Home)
+  heroTitle    String  @default("Todo para tus mejores momentos")
+  heroSubtitle String  @default("Encuentra tus bebidas favoritas en MALMOQ.")
+  heroImageUrl String?
+
+  // Datos tributarios
+  igvPercent       Float   @default(18)
+  pricesIncludeIgv Boolean @default(true)
+  companyRuc       String  @default("")
+  companyName      String  @default("MALMOQ")
+  companyLegalName String  @default("")
+  companyAddress   String  @default("Moquegua, Peru")
+
+  // Delivery
+  deliveryMinOrder Float @default(0)
+
+  // WhatsApp
+  whatsappNumber  String?
+  whatsappMessage String? @default("Hola, quisiera hacer una consulta.")
+
+  updatedAt DateTime @updatedAt
+}
+
+// ----------------------------------------------------------------------------
+// AUDITORIA
+// ----------------------------------------------------------------------------
+
+model ActivityLog {
+  id         Int      @id @default(autoincrement())
+  userId     Int?
+  user       User?    @relation(fields: [userId], references: [id])
+  action     String // ej: "PRODUCT_STOCK_UPDATE"
+  entity     String? // ej: "Product"
+  entityId   Int?
+  oldValue   String? // JSON en texto
+  newValue   String? // JSON en texto
+  createdAt  DateTime @default(now())
+}
