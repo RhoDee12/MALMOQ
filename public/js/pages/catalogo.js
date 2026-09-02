@@ -47,6 +47,11 @@ function leerFiltrosActuales() {
   const params = new URLSearchParams(window.location.search);
   return {
     q: params.get("q") || "",
+    // precioMax/precioMin no tienen un control propio en el formulario -
+    // vienen de los accesos rapidos "Compra por precio" del Home y se
+    // mantienen mientras el usuario siga navegando el catalogo.
+    precioMax: params.get("precioMax") || "",
+    precioMin: params.get("precioMin") || "",
     categoria: document.getElementById("filtro-categoria").value,
     marca: document.getElementById("filtro-marca").value,
     soloPromo: document.getElementById("filtro-promo").checked ? "1" : "",
@@ -61,6 +66,8 @@ async function buscarYRenderizarProductos() {
   const filtros = leerFiltrosActuales();
   const query = new URLSearchParams({
     ...(filtros.q && { q: filtros.q }),
+    ...(filtros.precioMax && { precioMax: filtros.precioMax }),
+    ...(filtros.precioMin && { precioMin: filtros.precioMin }),
     ...(filtros.categoria && { categoria: filtros.categoria }),
     ...(filtros.marca && { marca: filtros.marca }),
     ...(filtros.soloPromo && { soloPromo: filtros.soloPromo }),
@@ -71,7 +78,10 @@ async function buscarYRenderizarProductos() {
 
   try {
     const { products, total } = await apiFetch(`/productos?${query.toString()}`);
-    document.getElementById("resultado-contador").textContent = `${total} producto(s) encontrado(s)`;
+    let textoContador = `${total} producto(s) encontrado(s)`;
+    if (filtros.precioMax) textoContador += ` (hasta S/ ${filtros.precioMax})`;
+    if (filtros.precioMin) textoContador += ` (desde S/ ${filtros.precioMin})`;
+    document.getElementById("resultado-contador").textContent = textoContador;
 
     if (products.length === 0) {
       grid.innerHTML = `<div class="col text-center text-muted py-5">No se encontraron productos con estos filtros.</div>`;

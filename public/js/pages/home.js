@@ -1,34 +1,78 @@
 // ============================================================================
 // home.js - logica de la pagina de inicio (index.html)
 // ============================================================================
-// Carga: contenido del Hero, categorias, productos destacados/mas vendidos
-// y promociones activas - todo desde la API (nada esta escrito a mano en
-// el HTML, para que el jefe pueda cambiarlo desde el panel administrativo).
+// Carga: carrusel de banners (o hero de respaldo), categorias en circulo,
+// productos destacados/mas vendidos en carrusel horizontal, y promociones -
+// todo desde la API (nada esta escrito a mano en el HTML, para que el jefe
+// pueda cambiarlo desde el panel administrativo).
 // ============================================================================
 
 document.addEventListener("DOMContentLoaded", () => {
-  cargarHero();
+  cargarHeroCarousel();
   cargarCategorias();
   cargarDestacados();
   cargarMasVendidos();
   cargarPromociones();
+
+  initCarrusel("categorias-grid", "cat-prev", "cat-next");
+  initCarrusel("destacados-grid", "destacados-prev", "destacados-next");
+  initCarrusel("mas-vendidos-grid", "vendidos-prev", "vendidos-next");
 });
 
-/** Trae el titulo/subtitulo/imagen del Home desde la configuracion del sitio. */
-async function cargarHero() {
+/**
+ * Arma el carrusel superior. Si el jefe subio banners (modulo "Banners"
+ * del panel), se muestran esos, rotando. Si no hay ninguno, se arma un
+ * unico slide de respaldo con el titulo/subtitulo/imagen del Hero
+ * (modulo "Configuracion > General").
+ */
+async function cargarHeroCarousel() {
+  const itemsCont = document.getElementById("hero-carousel-items");
+  const indicadoresCont = document.getElementById("hero-carousel-indicadores");
+
   try {
-    const { settings } = await apiFetch("/configuracion");
-    document.getElementById("hero-titulo").textContent = settings.heroTitle;
-    document.getElementById("hero-subtitulo").textContent = settings.heroSubtitle;
-    if (settings.heroImageUrl) {
-      document.getElementById("hero-imagen").src = settings.heroImageUrl;
+    const [{ banners }, { settings }] = await Promise.all([apiFetch("/banners"), apiFetch("/configuracion")]);
+
+    // Franja de oferta: usa el subtitulo del hero como gancho si existe.
+    if (settings.heroSubtitle) {
+      document.getElementById("franja-oferta-texto").textContent = settings.heroSubtitle;
+      document.getElementById("franja-oferta-wrap").hidden = false;
     }
+
+    const slides = banners.length > 0
+      ? banners.map((b) => ({
+          imageUrl: b.imageUrl,
+          title: b.title || "",
+          linkUrl: b.linkUrl || "/productos.html",
+        }))
+      : [{
+          imageUrl: settings.heroImageUrl || "/img/placeholder-producto.svg",
+          title: settings.heroTitle || "Todo para tus mejores momentos",
+          linkUrl: "/productos.html",
+        }];
+
+    itemsCont.innerHTML = slides.map((s, i) => `
+      <div class="carousel-item ${i === 0 ? "active" : ""}">
+        <a href="${s.linkUrl}">
+          <img src="${s.imageUrl}" class="banner-slide-img" alt="${escapeHtml(s.title)}"
+               onerror="this.onerror=null;this.src='/img/placeholder-producto.svg';">
+        </a>
+        ${s.title ? `<div class="banner-caption"><h2>${escapeHtml(s.title)}</h2></div>` : ""}
+      </div>
+    `).join("");
+
+    if (slides.length > 1) {
+      indicadoresCont.innerHTML = slides.map((_, i) =>
+        `<button type="button" data-bs-target="#hero-carousel" data-bs-slide-to="${i}" class="${i === 0 ? "active" : ""}"></button>`
+      ).join("");
+    }
+
     if (settings.deliveryMinOrder > 0) {
       document.getElementById("info-delivery").textContent =
         `Pedido minimo para delivery: S/ ${settings.deliveryMinOrder.toFixed(2)}. Elige recojo en tienda o delivery a tu direccion al momento de comprar.`;
     }
   } catch (err) {
-    console.error("No se pudo cargar la configuracion del Home:", err);
+    console.error("No se pudo cargar el carrusel principal:", err);
+    itemsCont.innerHTML = `<div class="carousel-item active"><img src="/img/placeholder-producto.svg" class="banner-slide-img" alt="MALMOQ"></div>`;
   }
 }
 
@@ -37,48 +81,48 @@ async function cargarCategorias() {
   try {
     const { categories } = await apiFetch("/categorias");
     if (categories.length === 0) {
-      grid.innerHTML = `<div class="col text-center text-muted py-4">Aun no hay categorias.</div>`;
+      grid.innerHTML = `<p class="text-muted py-4">Aun no hay categorias.</p>`;
       return;
     }
     grid.innerHTML = categories.map((c) => `
-      <div class="col">
-        <a href="/productos.html?categoria=${c.id}" class="categoria-card d-block text-decoration-none">
-          <img src="${c.imageUrl || "/img/placeholder-producto.svg"}" alt="${c.name}">
-          <span>${c.name}</span>
+      <div class="carrusel-item item-categoria">
+        <a href="/productos.html?categoria=${c.id}" class="categoria-circulo">
+          <span class="circulo-img"><img src="${c.imageUrl || "/img/placeholder-producto.svg"}" alt="${escapeHtml(c.name)}"></span>
+          <span>${escapeHtml(c.name)}</span>
         </a>
       </div>
     `).join("");
   } catch (err) {
-    grid.innerHTML = `<div class="col text-center text-danger py-4">No se pudieron cargar las categorias.</div>`;
+    grid.innerHTML = `<p class="text-danger py-4">No se pudieron cargar las categorias.</p>`;
   }
 }
 
 async function cargarDestacados() {
   const grid = document.getElementById("destacados-grid");
   try {
-    const { products } = await apiFetch("/productos?orden=recientes&porPagina=8");
-    renderGridProductos(grid, products);
+    const { products } = await apiFetch("/productos?orden=recientes&porPagina=10");
+    renderCarruselProductos(grid, products);
   } catch {
-    grid.innerHTML = `<div class="col text-center text-danger py-4">No se pudieron cargar los productos.</div>`;
+    grid.innerHTML = `<p class="text-danger py-4">No se pudieron cargar los productos.</p>`;
   }
 }
 
 async function cargarMasVendidos() {
   const grid = document.getElementById("mas-vendidos-grid");
   try {
-    const { products } = await apiFetch("/productos?orden=masVendidos&porPagina=8");
-    renderGridProductos(grid, products);
+    const { products } = await apiFetch("/productos?orden=masVendidos&porPagina=10");
+    renderCarruselProductos(grid, products);
   } catch {
-    grid.innerHTML = `<div class="col text-center text-danger py-4">No se pudieron cargar los productos.</div>`;
+    grid.innerHTML = `<p class="text-danger py-4">No se pudieron cargar los productos.</p>`;
   }
 }
 
-function renderGridProductos(grid, products) {
+function renderCarruselProductos(grid, products) {
   if (products.length === 0) {
-    grid.innerHTML = `<div class="col text-center text-muted py-4">Aun no hay productos para mostrar.</div>`;
+    grid.innerHTML = `<p class="text-muted py-4">Aun no hay productos para mostrar.</p>`;
     return;
   }
-  grid.innerHTML = products.map(renderProductCard).join("");
+  grid.innerHTML = products.map(renderProductCardCarrusel).join("");
 }
 
 async function cargarPromociones() {
@@ -89,10 +133,10 @@ async function cargarPromociones() {
     document.getElementById("promociones-grid").innerHTML = promotions.map((p) => `
       <div class="col-md-4">
         <div class="rounded-malmoq overflow-hidden border h-100">
-          ${p.imageUrl ? `<img src="${p.imageUrl}" class="w-100" style="height:160px;object-fit:cover;" alt="${p.title}">` : ""}
+          ${p.imageUrl ? `<img src="${p.imageUrl}" class="w-100" style="height:160px;object-fit:cover;" alt="${escapeHtml(p.title)}">` : ""}
           <div class="p-3">
-            <h5 class="font-semibold mb-1">${p.title}</h5>
-            <p class="text-secondary small mb-0">${p.description || ""}</p>
+            <h5 class="font-semibold mb-1">${escapeHtml(p.title)}</h5>
+            <p class="text-secondary small mb-0">${escapeHtml(p.description || "")}</p>
           </div>
         </div>
       </div>

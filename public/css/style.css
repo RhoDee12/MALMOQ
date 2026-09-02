@@ -24,6 +24,8 @@
   --malmoq-gris: #6b6b6b;
   --malmoq-gris-claro: #f4f2f2;
   --malmoq-borde: #e5dede;
+  --malmoq-dorado: #d4a017; /* acento para ofertas/destacados, sobre el vino tinto */
+  --malmoq-verde-oferta: #1a7a3c;
 
   --fuente: "Montserrat", sans-serif;
   --radio: 10px;
@@ -311,3 +313,205 @@ a:hover {
 .font-semibold { font-weight: 600; }
 .rounded-malmoq { border-radius: var(--radio); }
 .spinner-malmoq { color: var(--malmoq-rojo); }
+
+/* ============================================================================
+   BLOQUE "LLAMATIVO" DEL HOME: carrusel de banners, carruseles horizontales
+   de productos/categorias, y "comprar por precio". Estilo inspirado en
+   tiendas de licores grandes (banners de oferta, badges de descuento
+   grandes), pero con la paleta propia de MALMOQ (vino tinto + dorado).
+   ============================================================================ */
+
+/* ------------------------------------------------------- CARRUSEL DE BANNERS */
+
+.banner-carousel {
+  border-radius: 0 0 1.4rem 1.4rem;
+  overflow: hidden;
+}
+.banner-carousel .carousel-item {
+  min-height: 220px;
+}
+.banner-carousel .banner-slide-img {
+  width: 100%;
+  height: clamp(220px, 32vw, 420px);
+  object-fit: cover;
+  display: block;
+}
+.banner-carousel .banner-caption {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 6%;
+  background: linear-gradient(90deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.15) 55%, transparent 100%);
+}
+.banner-carousel .banner-caption h2 {
+  color: #fff;
+  font-weight: 900;
+  font-size: clamp(1.5rem, 3.4vw, 2.6rem);
+  text-shadow: 0 2px 10px rgba(0,0,0,0.4);
+  max-width: 560px;
+}
+.banner-carousel .carousel-indicators [data-bs-target] {
+  background-color: var(--malmoq-dorado);
+}
+.banner-carousel .carousel-control-prev,
+.banner-carousel .carousel-control-next {
+  width: 6%;
+}
+
+/* Franja de oferta rotativa, tipo "BOGO / oferta del mes" bien llamativa. */
+.franja-oferta {
+  background: linear-gradient(120deg, var(--malmoq-rojo) 0%, #8f1010 60%, var(--malmoq-rojo-oscuro) 100%);
+  border-radius: var(--radio);
+  color: #fff;
+  padding: 1.6rem 1.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.franja-oferta h3 {
+  font-weight: 900;
+  font-size: clamp(1.2rem, 2.6vw, 1.8rem);
+  margin: 0;
+  line-height: 1.15;
+}
+.franja-oferta .btn-dorado {
+  background-color: var(--malmoq-dorado);
+  border-color: var(--malmoq-dorado);
+  color: var(--malmoq-negro);
+  font-weight: 800;
+  white-space: nowrap;
+}
+.franja-oferta .btn-dorado:hover {
+  background-color: #b98812;
+  border-color: #b98812;
+  color: var(--malmoq-negro);
+}
+
+/* -------------------------------------------------- CARRUSELES HORIZONTALES */
+/* Usado para categorias y productos: scroll horizontal con snap + flechas,
+   en vez de una grilla que se corta en varias filas. Ver public/js/carousel.js */
+
+.carrusel-seccion {
+  position: relative;
+}
+.carrusel-pista {
+  display: flex;
+  gap: 0.9rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  padding-bottom: 0.6rem;
+  -ms-overflow-style: none;
+  scrollbar-width: none; /* Firefox */
+}
+.carrusel-pista::-webkit-scrollbar { display: none; }
+
+.carrusel-pista > .carrusel-item {
+  scroll-snap-align: start;
+  flex: 0 0 auto;
+}
+.carrusel-pista > .carrusel-item.item-producto { width: 190px; }
+.carrusel-pista > .carrusel-item.item-categoria { width: 110px; }
+
+.carrusel-flecha {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 5;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid var(--malmoq-borde);
+  background: #fff;
+  color: var(--malmoq-rojo);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  box-shadow: var(--sombra);
+  cursor: pointer;
+}
+.carrusel-flecha.flecha-prev { left: -6px; }
+.carrusel-flecha.flecha-next { right: -6px; }
+.carrusel-flecha:hover { background: var(--malmoq-rojo); color: #fff; }
+
+/* Categoria en formato circulo (estilo "trending categories") */
+.categoria-circulo {
+  text-align: center;
+  text-decoration: none;
+  display: block;
+}
+.categoria-circulo .circulo-img {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: var(--malmoq-gris-claro);
+  border: 2px solid var(--malmoq-borde);
+  overflow: hidden;
+  margin: 0 auto 0.5rem;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+.categoria-circulo .circulo-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.categoria-circulo:hover .circulo-img {
+  border-color: var(--malmoq-rojo);
+  transform: translateY(-3px);
+}
+.categoria-circulo span {
+  display: block;
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: var(--malmoq-gris-oscuro);
+}
+
+/* Badges de oferta mas grandes / llamativos que el badge chico anterior */
+.badge-oferta-grande {
+  background-color: var(--malmoq-verde-oferta);
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.7rem;
+  padding: 0.3em 0.6em;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.precio-descuento-pct {
+  color: var(--malmoq-verde-oferta);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+/* ------------------------------------------------------- COMPRAR POR PRECIO */
+
+.precio-circulo {
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  background: linear-gradient(150deg, var(--malmoq-rojo) 0%, var(--malmoq-rojo-oscuro) 100%);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-weight: 900;
+  font-size: clamp(0.85rem, 1.6vw, 1.15rem);
+  text-decoration: none;
+  padding: 0.5rem;
+  box-shadow: var(--sombra);
+  transition: transform 0.15s ease;
+}
+.precio-circulo:hover {
+  transform: scale(1.05);
+  color: #fff;
+}
+.precio-circulo.dorado {
+  background: linear-gradient(150deg, var(--malmoq-dorado) 0%, #a9790d 100%);
+  color: var(--malmoq-negro);
+}
+.precio-circulo.dorado:hover { color: var(--malmoq-negro); }

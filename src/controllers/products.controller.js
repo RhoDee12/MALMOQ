@@ -20,11 +20,13 @@ const { MOVEMENT_TYPES } = require("../constants");
  *   categoria  - id de categoria
  *   marca      - id de marca
  *   soloPromo  - "1" para mostrar solo productos con promocion activa
+ *   precioMax  - precio maximo (para los accesos rapidos "Compra por precio")
+ *   precioMin  - precio minimo
  *   orden      - "recientes" | "masVendidos" | "precioAsc" | "precioDesc"
  *   pagina, porPagina - paginacion
  */
 async function listPublic(req, res) {
-  const { q, categoria, marca, soloPromo, orden } = req.query;
+  const { q, categoria, marca, soloPromo, orden, precioMax, precioMin } = req.query;
   const pagina = Math.max(1, Number(req.query.pagina) || 1);
   const porPagina = Math.min(60, Number(req.query.porPagina) || 24);
 
@@ -37,6 +39,12 @@ async function listPublic(req, res) {
       { brand: { name: { contains: q } } },
     ];
   }
+  // El filtro de precio se aplica sobre el precio de lista (price). No se
+  // filtra por el precio con descuento porque ese solo se conoce en
+  // JavaScript (getEffectiveUnitPrice) y complicaria la consulta SQL; es
+  // una aproximacion razonable para los accesos rapidos "Compra por precio".
+  if (precioMax) where.price = { ...(where.price || {}), lte: Number(precioMax) };
+  if (precioMin) where.price = { ...(where.price || {}), gte: Number(precioMin) };
   if (soloPromo === "1") {
     where.OR = [...(where.OR || []), { promoPrice: { not: null } }, { discountPercent: { not: null } }];
   }

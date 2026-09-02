@@ -6,42 +6,59 @@
 // ============================================================================
 
 /**
- * Construye el HTML de una tarjeta de producto (usar dentro de un
- * contenedor con clase "row" o "row row-cols-...").
+ * Construye el HTML INTERNO de una tarjeta de producto (sin el contenedor
+ * de layout alrededor). Lo usan renderProductCard (grilla) y
+ * renderProductCardCarrusel (carrusel horizontal) para no duplicar el
+ * marcado de la tarjeta en si.
  * @param {object} product - producto tal como lo devuelve la API (incluye effectivePrice)
- * @returns {string} HTML de la columna con la tarjeta
  */
-function renderProductCard(product) {
+function renderProductCardInner(product) {
   const tienePromo = product.effectivePrice < product.price;
+  const porcentajeOff = tienePromo ? Math.round((1 - product.effectivePrice / product.price) * 100) : 0;
   const sinStock = product.stock <= 0;
   const stockBajo = !sinStock && product.stock <= product.minStock;
   const imagen = product.imageUrl || "/img/placeholder-producto.svg";
 
   return `
-    <div class="col">
-      <div class="producto-card">
-        <a href="/producto.html?id=${product.id}" class="producto-img-wrap position-relative d-block">
-          <img src="${imagen}" alt="${escapeHtml(product.name)}" loading="lazy"
-               onerror="this.onerror=null;this.src='/img/placeholder-producto.svg';">
-          ${tienePromo ? '<span class="badge badge-promo position-absolute top-0 start-0 m-2">Promo</span>' : ""}
-          ${sinStock ? '<span class="badge badge-agotado position-absolute top-0 end-0 m-2">Agotado</span>' : ""}
-          ${!sinStock && stockBajo ? '<span class="badge badge-stock-bajo position-absolute top-0 end-0 m-2">Pocas unidades</span>' : ""}
-        </a>
-        <div class="producto-body">
-          <span class="producto-marca">${escapeHtml(product.brand?.name || product.category?.name || "")}</span>
-          <a href="/producto.html?id=${product.id}" class="producto-nombre text-body text-decoration-none">${escapeHtml(product.name)}</a>
-          <div class="mb-2">
-            <span class="precio-actual">S/ ${product.effectivePrice.toFixed(2)}</span>
-            ${tienePromo ? `<span class="precio-tachado">S/ ${product.price.toFixed(2)}</span>` : ""}
-          </div>
-          <button class="btn btn-primary btn-sm mt-auto" ${sinStock ? "disabled" : ""}
-                  onclick="agregarAlCarritoDesdeTarjeta(${product.id})">
-            ${sinStock ? "Sin stock" : "Agregar al carrito"}
-          </button>
+    <div class="producto-card">
+      <a href="/producto.html?id=${product.id}" class="producto-img-wrap position-relative d-block">
+        <img src="${imagen}" alt="${escapeHtml(product.name)}" loading="lazy"
+             onerror="this.onerror=null;this.src='/img/placeholder-producto.svg';">
+        ${tienePromo ? `<span class="badge badge-oferta-grande position-absolute top-0 start-0 m-2">Oferta ${porcentajeOff > 0 ? `-${porcentajeOff}%` : ""}</span>` : ""}
+        ${sinStock ? '<span class="badge badge-agotado position-absolute top-0 end-0 m-2">Agotado</span>' : ""}
+        ${!sinStock && stockBajo ? '<span class="badge badge-stock-bajo position-absolute top-0 end-0 m-2">Pocas unidades</span>' : ""}
+      </a>
+      <div class="producto-body">
+        <span class="producto-marca">${escapeHtml(product.brand?.name || product.category?.name || "")}</span>
+        <a href="/producto.html?id=${product.id}" class="producto-nombre text-body text-decoration-none">${escapeHtml(product.name)}</a>
+        <div class="mb-2">
+          <span class="precio-actual">S/ ${product.effectivePrice.toFixed(2)}</span>
+          ${tienePromo ? `<span class="precio-tachado">S/ ${product.price.toFixed(2)}</span>` : ""}
+          ${tienePromo ? `<span class="precio-descuento-pct d-block">Ahorras ${porcentajeOff}%</span>` : ""}
         </div>
+        <button class="btn btn-primary btn-sm mt-auto" ${sinStock ? "disabled" : ""}
+                onclick="agregarAlCarritoDesdeTarjeta(${product.id})">
+          ${sinStock ? "Sin stock" : "Agregar al carrito"}
+        </button>
       </div>
     </div>
   `;
+}
+
+/**
+ * Tarjeta de producto para una grilla Bootstrap (usar dentro de un
+ * contenedor con clase "row row-cols-...").
+ */
+function renderProductCard(product) {
+  return `<div class="col">${renderProductCardInner(product)}</div>`;
+}
+
+/**
+ * Tarjeta de producto para un carrusel horizontal (usar dentro de un
+ * contenedor con clase "carrusel-pista", ver public/css/style.css).
+ */
+function renderProductCardCarrusel(product) {
+  return `<div class="carrusel-item item-producto">${renderProductCardInner(product)}</div>`;
 }
 
 /** Handler generico usado por el boton "Agregar al carrito" de las tarjetas. */
