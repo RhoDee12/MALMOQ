@@ -87,15 +87,18 @@ async function main() {
   console.log(`- ${CATEGORIES.length} categorias listas.`);
 
   // 6) Productos de ejemplo (para poder ver la tienda funcionando)
+  // Los SKU usan el mismo criterio que el panel genera automaticamente al
+  // crear un producto nuevo: primeras 3 letras de la categoria + numero
+  // correlativo (ver prefijoSkuDeCategoria en public/js/admin/pages/productos.js).
   const sampleProducts = [
-    { sku: "CERV-001", name: "Cerveza Pilsen Callao 620ml", category: "Cervezas", price: 8.5, stock: 120 },
-    { sku: "CERV-002", name: "Cerveza Cusquena Dorada 620ml", category: "Cervezas", price: 9.0, stock: 100 },
-    { sku: "VINO-001", name: "Vino Tabernero Borgona 750ml", category: "Vinos", price: 25.0, stock: 40 },
-    { sku: "WHIS-001", name: "Whisky Johnnie Walker Red Label 750ml", category: "Whisky", price: 65.0, promoPrice: 58.0, stock: 25 },
-    { sku: "VODK-001", name: "Vodka Absolut Blue 750ml", category: "Vodka", price: 55.0, stock: 30 },
+    { sku: "CER-001", name: "Cerveza Pilsen Callao 620ml", category: "Cervezas", price: 8.5, stock: 120 },
+    { sku: "CER-002", name: "Cerveza Cusquena Dorada 620ml", category: "Cervezas", price: 9.0, stock: 100 },
+    { sku: "VIN-001", name: "Vino Tabernero Borgona 750ml", category: "Vinos", price: 25.0, stock: 40 },
+    { sku: "WHI-001", name: "Whisky Johnnie Walker Red Label 750ml", category: "Whisky", price: 65.0, promoPrice: 58.0, stock: 25 },
+    { sku: "VOD-001", name: "Vodka Absolut Blue 750ml", category: "Vodka", price: 55.0, stock: 30 },
     { sku: "RON-001", name: "Ron Cartavio Black 750ml", category: "Ron", price: 38.0, stock: 35 },
-    { sku: "TEQU-001", name: "Tequila Jose Cuervo Especial 750ml", category: "Tequila", price: 70.0, stock: 15 },
-    { sku: "PISC-001", name: "Pisco Queirolo Quebranta 750ml", category: "Pisco", price: 32.0, stock: 45 },
+    { sku: "TEQ-001", name: "Tequila Jose Cuervo Especial 750ml", category: "Tequila", price: 70.0, stock: 15 },
+    { sku: "PIS-001", name: "Pisco Queirolo Quebranta 750ml", category: "Pisco", price: 32.0, stock: 45 },
   ];
 
   for (const p of sampleProducts) {

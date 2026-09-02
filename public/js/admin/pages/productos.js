@@ -16,7 +16,57 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   document.getElementById("form-producto").addEventListener("submit", guardarProducto);
   document.getElementById("buscar-producto").addEventListener("input", (e) => renderTabla(filtrarProductos(e.target.value)));
+
+  // Solo re-genera el SKU cuando se esta CREANDO un producto (p-id vacio).
+  // Al editar uno existente, el SKU no se toca.
+  document.getElementById("p-categoria").addEventListener("change", () => {
+    if (!document.getElementById("p-id").value) actualizarSkuSugerido();
+  });
 });
+
+/**
+ * Arma el prefijo del SKU a partir del nombre de la categoria: mayusculas,
+ * sin tildes/espacios, primeras 3 letras (o menos si el nombre es mas
+ * corto). Funciona para CUALQUIER categoria, incluidas las que se creen
+ * mas adelante (ej: "Cigarros" -> "CIG", "Ron" -> "RON").
+ * @param {string} nombreCategoria
+ */
+function prefijoSkuDeCategoria(nombreCategoria) {
+  const limpio = nombreCategoria
+    .normalize("NFD").replace(/[̀-ͯ]/g, "") // quita tildes
+    .toUpperCase()
+    .replace(/[^A-Z]/g, ""); // solo letras
+  return limpio.slice(0, 3) || "PRD";
+}
+
+/**
+ * Calcula el siguiente SKU disponible para una categoria, mirando los
+ * productos que ya existen (productosCache). Ej: si ya hay RON-001 y
+ * RON-002, devuelve RON-003.
+ * @param {number} categoryId
+ * @returns {string}
+ */
+function siguienteSku(categoryId) {
+  const categoria = categoriasCache.find((c) => c.id === Number(categoryId));
+  if (!categoria) return "";
+  const prefijo = prefijoSkuDeCategoria(categoria.name);
+
+  let maxNumero = 0;
+  const patron = new RegExp(`^${prefijo}-(\\d+)$`, "i");
+  for (const p of productosCache) {
+    const match = p.sku.match(patron);
+    if (match) maxNumero = Math.max(maxNumero, Number(match[1]));
+  }
+
+  const siguiente = String(maxNumero + 1).padStart(3, "0");
+  return `${prefijo}-${siguiente}`;
+}
+
+/** Actualiza el campo SKU segun la categoria elegida en el formulario. */
+function actualizarSkuSugerido() {
+  const categoryId = document.getElementById("p-categoria").value;
+  document.getElementById("p-sku").value = categoryId ? siguienteSku(categoryId) : "";
+}
 
 async function cargarCategoriasYMarcas() {
   const [{ categories }, { brands }] = await Promise.all([apiFetch("/admin/categorias"), apiFetch("/marcas")]);
@@ -67,6 +117,7 @@ function abrirModalNuevoProducto() {
   document.getElementById("p-id").value = "";
   document.getElementById("modal-producto-titulo").textContent = "Nuevo producto";
   document.getElementById("grupo-stock-inicial").hidden = false;
+  actualizarSkuSugerido(); // genera el SKU para la categoria que haya quedado seleccionada por defecto
 }
 
 function abrirModalEditarProducto(id) {
