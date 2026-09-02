@@ -133,8 +133,41 @@ imagen (`imageUrl`), sin importar de donde venga.
 
 ## Notas de seguridad
 
-- Todas las reglas de permisos se validan en el backend (`src/middleware/auth.middleware.js`),
-  nunca solo en el frontend - aunque alguien manipule el HTML/JS del navegador,
-  la API rechaza lo que no le corresponde a su rol.
-- Las contrasenas se guardan cifradas con bcrypt, nunca en texto plano.
-- El archivo `.env` (con `JWT_SECRET` y `DATABASE_URL`) NUNCA se sube a GitHub.
+Protecciones ya implementadas:
+
+- **Permisos en el backend, no solo en el frontend**: todas las reglas de
+  quien puede hacer que se validan en `src/middleware/auth.middleware.js`.
+  Aunque alguien manipule el HTML/JS del navegador o llame a la API
+  directamente, el servidor rechaza lo que no le corresponde a su rol.
+- **Contrasenas cifradas** con bcrypt (nunca se guardan en texto plano).
+- **Sesiones en cookie httpOnly**: el token no es accesible desde
+  JavaScript del navegador (mitiga robo de sesion via XSS), con
+  `SameSite=Lax` (mitiga CSRF en peticiones que cambian datos) y
+  `Secure` obligatorio en produccion (exige HTTPS).
+- **Limite de intentos (rate limiting)**: una misma IP no puede hacer mas
+  de 10 intentos de login/registro cada 15 minutos (corta ataques de
+  fuerza bruta de contrasenas), ni mas de 300 peticiones a la API cada 5
+  minutos (corta abuso/saturacion basica). Ver `src/middleware/rateLimiters.js`.
+- **Cabeceras de seguridad HTTP** (via `helmet`): anti-clickjacking,
+  anti-sniffing de tipo de archivo, HSTS, etc.
+- **Sin SQL injection**: Prisma arma las consultas de forma parametrizada
+  siempre - nunca se concatena texto del usuario directo en una consulta.
+- **Sin datos ni secretos en el frontend**: `.env` (con `JWT_SECRET` y
+  `DATABASE_URL`) nunca se sube a git; precios/stock/permisos siempre se
+  validan contra la base de datos, nunca se confia en lo que manda el navegador.
+- **Subida de archivos restringida**: solo imagenes (jpg/png/webp/gif),
+  maximo 5 MB, con nombre de archivo saneado (ver `src/middleware/upload.middleware.js`).
+- **0 vulnerabilidades conocidas** en las dependencias (`npm audit`).
+
+Pendientes para cuando el sitio salga a produccion (internet real):
+
+- **HTTPS obligatorio**: el hosting (Render/Railway/etc.) lo da gratis;
+  solo hay que activarlo y poner `NODE_ENV=production` para que la
+  cookie de sesion exija conexion segura.
+- **Backups automaticos de la base de datos**: al pasar a Postgres en la
+  nube (Neon/Supabase), activar sus backups automaticos diarios.
+- **Verificacion en dos pasos (2FA)** para el usuario JEFE, como capa
+  extra ademas de la contrasena (no implementado todavia).
+- **Monitoreo**: revisar logs del hosting periodicamente para detectar
+  actividad rara (muchos 401/429 seguidos, picos de trafico inusuales).
+- Mantener las dependencias actualizadas (`npm audit` cada tanto).
