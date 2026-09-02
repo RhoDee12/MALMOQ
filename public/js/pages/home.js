@@ -14,9 +14,10 @@ document.addEventListener("DOMContentLoaded", () => {
   cargarMasVendidos();
   cargarPromociones();
 
-  initCarrusel("categorias-grid", "cat-prev", "cat-next");
-  initCarrusel("destacados-grid", "destacados-prev", "destacados-next");
-  initCarrusel("mas-vendidos-grid", "vendidos-prev", "vendidos-next");
+  // Intervalos distintos para que las 3 filas no avancen todas a la vez.
+  initCarrusel("categorias-grid", "cat-prev", "cat-next", { intervalMs: 2600 });
+  initCarrusel("destacados-grid", "destacados-prev", "destacados-next", { intervalMs: 3200 });
+  initCarrusel("mas-vendidos-grid", "vendidos-prev", "vendidos-next", { intervalMs: 3800 });
 });
 
 /**
@@ -74,6 +75,13 @@ async function cargarHeroCarousel() {
     console.error("No se pudo cargar el carrusel principal:", err);
     itemsCont.innerHTML = `<div class="carousel-item active"><img src="/img/placeholder-producto.svg" class="banner-slide-img" alt="MALMOQ"></div>`;
   }
+
+  // El HTML no trae "data-bs-ride" a proposito: las slides recien se
+  // conocen aca (llegan de la API de forma asincrona), asi que el
+  // carrusel se activa a mano DESPUES de insertarlas. Si se dejara
+  // data-bs-ride en el HTML, Bootstrap lo inicializaria apenas carga la
+  // pagina con el carrusel todavia vacio, y el auto-avance no funcionaria.
+  new bootstrap.Carousel(document.getElementById("hero-carousel"), { interval: 4500, ride: "carousel", wrap: true });
 }
 
 async function cargarCategorias() {

@@ -22,7 +22,10 @@
          muestran rotando aca; si no hay ninguno, se arma un banner de
          respaldo con el titulo/subtitulo configurado en "Configuracion". -->
     <section class="container mt-3">
-      <div id="hero-carousel" class="carousel slide banner-carousel" data-bs-ride="carousel">
+      <!-- Sin data-bs-ride: se inicializa a mano en js/pages/home.js DESPUES
+           de insertar las slides (ver comentario ahi), porque recien se
+           conocen cuando llega la respuesta de la API. -->
+      <div id="hero-carousel" class="carousel slide banner-carousel"
         <div class="carousel-indicators" id="hero-carousel-indicadores"></div>
         <div class="carousel-inner" id="hero-carousel-items"></div>
         <button class="carousel-control-prev" type="button" data-bs-target="#hero-carousel" data-bs-slide="prev">
