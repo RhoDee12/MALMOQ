@@ -15,7 +15,7 @@ async function renderLayout() {
   renderFooter();
   cartUpdateBadge();
   await applySessionToHeader();
-  await applyWhatsappButton();
+  await aplicarConfiguracionGlobal();
 }
 
 function renderHeader() {
@@ -120,23 +120,55 @@ async function applySessionToHeader() {
   }
 }
 
-/** Agrega el boton flotante de WhatsApp si el jefe configuro un numero. */
-async function applyWhatsappButton() {
+/**
+ * Aplica en una sola pasada lo que depende de "Configuracion" del panel:
+ * logo en el navbar, favicon de la pestana, y el boton flotante de WhatsApp.
+ * Si el jefe todavia no subio logo/favicon, se deja el texto "MALMOQ" y el
+ * favicon por defecto del navegador - no rompe nada.
+ */
+async function aplicarConfiguracionGlobal() {
   try {
     const { settings } = await apiFetch("/configuracion");
-    if (!settings.whatsappNumber) return;
-    const msg = encodeURIComponent(settings.whatsappMessage || "Hola, quisiera hacer una consulta.");
-    const a = document.createElement("a");
-    a.href = `https://wa.me/${settings.whatsappNumber}?text=${msg}`;
-    a.target = "_blank";
-    a.rel = "noopener";
-    a.className = "whatsapp-float";
-    a.innerHTML = "&#128222;";
-    a.title = "Escribenos por WhatsApp";
-    document.body.appendChild(a);
-  } catch {
-    // Si falla, simplemente no se muestra el boton - no es critico.
+    aplicarLogoNavbar(settings.logoUrl);
+    aplicarFavicon(settings.faviconUrl);
+    aplicarWhatsappButton(settings.whatsappNumber, settings.whatsappMessage);
+  } catch (err) {
+    console.error("No se pudo cargar la configuracion del sitio:", err);
   }
+}
+
+/** Reemplaza el texto "MALMOQ" del navbar por la imagen del logo, si ya se subio una. */
+function aplicarLogoNavbar(logoUrl) {
+  if (!logoUrl) return; // sin logo subido todavia: se deja el texto "MALMOQ"
+  const brand = document.querySelector(".malmoq-navbar .navbar-brand");
+  if (!brand) return;
+  brand.innerHTML = `<img src="${logoUrl}" alt="MALMOQ">`;
+}
+
+/** Cambia el icono de la pestana del navegador (favicon), si ya se subio uno. */
+function aplicarFavicon(faviconUrl) {
+  if (!faviconUrl) return;
+  let link = document.querySelector('link[rel="icon"]');
+  if (!link) {
+    link = document.createElement("link");
+    link.rel = "icon";
+    document.head.appendChild(link);
+  }
+  link.href = faviconUrl;
+}
+
+/** Agrega el boton flotante de WhatsApp si el jefe configuro un numero. */
+function aplicarWhatsappButton(whatsappNumber, whatsappMessage) {
+  if (!whatsappNumber) return;
+  const msg = encodeURIComponent(whatsappMessage || "Hola, quisiera hacer una consulta.");
+  const a = document.createElement("a");
+  a.href = `https://wa.me/${whatsappNumber}?text=${msg}`;
+  a.target = "_blank";
+  a.rel = "noopener";
+  a.className = "whatsapp-float";
+  a.innerHTML = "&#128222;";
+  a.title = "Escribenos por WhatsApp";
+  document.body.appendChild(a);
 }
 
 document.addEventListener("DOMContentLoaded", renderLayout);

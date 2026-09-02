@@ -329,11 +329,21 @@ a:hover {
 }
 .banner-carousel .carousel-item {
   min-height: 220px;
+  /* Fondo detras de la imagen: si la foto/banner subido no tiene
+     exactamente la forma ancha del carrusel, va a quedar mas chica y
+     centrada (object-fit:contain, ver abajo) en vez de recortada - este
+     degrade de marca rellena el espacio sobrante en vez de dejarlo en blanco. */
+  background: linear-gradient(120deg, var(--malmoq-rojo) 0%, var(--malmoq-rojo-oscuro) 100%);
 }
 .banner-carousel .banner-slide-img {
   width: 100%;
   height: clamp(220px, 32vw, 420px);
-  object-fit: cover;
+  /* "contain" en vez de "cover": SIEMPRE se ve la imagen completa, sin
+     recortar ningun borde ni texto, sin importar el ancho/alto que tenga
+     la imagen que suba el jefe. La contra es que puede quedar franjas del
+     fondo (arriba) a los costados si la imagen no es exactamente ancha -
+     es preferible a cortar contenido importante (como el nombre MALMOQ). */
+  object-fit: contain;
   display: block;
 }
 .banner-carousel .banner-caption {
