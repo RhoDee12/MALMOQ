@@ -101,7 +101,7 @@ function renderTabla(products) {
       <td>${escapeHtml(p.sku)}</td>
       <td>${escapeHtml(p.name)}</td>
       <td>${escapeHtml(p.category?.name || "-")}</td>
-      <td>S/ ${p.price.toFixed(2)}</td>
+      <td>S/ ${p.price.toFixed(2)}${p.boxPrice ? `<br><small class="text-secondary">Caja (${p.unitsPerBox}): S/ ${p.boxPrice.toFixed(2)}</small>` : ""}</td>
       <td>${p.stock} ${p.stock <= p.minStock ? '<span class="badge bg-warning text-dark">bajo</span>' : ""}</td>
       <td>${p.isActive ? '<span class="badge bg-success">Activo</span>' : '<span class="badge bg-secondary">Inactivo</span>'}</td>
       <td>
@@ -133,6 +133,8 @@ function abrirModalEditarProducto(id) {
   document.getElementById("p-precio").value = p.price;
   document.getElementById("p-precio-promo").value = p.promoPrice || "";
   document.getElementById("p-descuento").value = p.discountPercent || "";
+  document.getElementById("p-unidades-caja").value = p.unitsPerBox || "";
+  document.getElementById("p-precio-caja").value = p.boxPrice || "";
   document.getElementById("p-stock-minimo").value = p.minStock;
   document.getElementById("modal-producto-titulo").textContent = "Editar producto";
   // El stock NO se edita aca (usar el modulo de Inventario, para que quede auditado).
@@ -154,9 +156,17 @@ async function guardarProducto(e) {
     price: Number(document.getElementById("p-precio").value),
     promoPrice: document.getElementById("p-precio-promo").value || "",
     discountPercent: document.getElementById("p-descuento").value || "",
+    unitsPerBox: document.getElementById("p-unidades-caja").value || "",
+    boxPrice: document.getElementById("p-precio-caja").value || "",
     minStock: Number(document.getElementById("p-stock-minimo").value),
   };
   if (!id) body.stock = Number(document.getElementById("p-stock").value) || 0;
+
+  const tieneUnidadesCaja = body.unitsPerBox !== "";
+  const tienePrecioCaja = body.boxPrice !== "";
+  if (tieneUnidadesCaja !== tienePrecioCaja) {
+    return alert("Para vender por caja completa \"Unidades por caja\" y \"Precio por caja\" (o deja ambos vacios).");
+  }
 
   try {
     let productId = id;

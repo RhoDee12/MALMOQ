@@ -52,6 +52,7 @@ async function create(req, res) {
           canManageOrders: perms.canManageOrders !== false,
           canRegisterSales: perms.canRegisterSales !== false,
           canViewCustomers: Boolean(perms.canViewCustomers),
+          canEditConfirmedOrders: Boolean(perms.canEditConfirmedOrders),
         },
       },
     },
@@ -79,7 +80,7 @@ async function update(req, res) {
     if (req.body[field] !== undefined) profileData[field] = req.body[field];
   }
   if (permissions) {
-    for (const key of ["canManageProducts", "canManageInventory", "canManageOrders", "canRegisterSales", "canViewCustomers"]) {
+    for (const key of ["canManageProducts", "canManageInventory", "canManageOrders", "canRegisterSales", "canViewCustomers", "canEditConfirmedOrders"]) {
       if (permissions[key] !== undefined) profileData[key] = Boolean(permissions[key]);
     }
   }

@@ -99,7 +99,7 @@ function renderResumen() {
   const items = cartGetItems();
   document.getElementById("resumen-items").innerHTML = items.map((i) => `
     <div class="d-flex justify-content-between">
-      <span>${i.quantity} x ${escapeHtml(i.name)}</span>
+      <span>${i.quantity} x ${escapeHtml(i.name)} ${i.saleType === "CAJA" ? `<small class="text-secondary">(caja x${i.unitsPerBox})</small>` : ""}</span>
       <span>S/ ${(i.unitPrice * i.quantity).toFixed(2)}</span>
     </div>`).join("");
 
@@ -127,7 +127,7 @@ async function confirmarPedido(e) {
     if (!paymentMethodId) throw new Error("Debes elegir un medio de pago.");
 
     const body = {
-      items: cartGetItems().map((i) => ({ productId: i.productId, quantity: i.quantity })),
+      items: cartGetItems().map((i) => ({ productId: i.productId, quantity: i.quantity, saleType: i.saleType || "UNIDAD" })),
       deliveryMode,
       paymentMethodId: Number(paymentMethodId),
     };
@@ -141,6 +141,10 @@ async function confirmarPedido(e) {
     const { order } = await apiFetch("/pedidos", { method: "POST", body });
     pedidoCreadoId = order.id;
     cartClear();
+
+    const linkComprobante = document.getElementById("link-ver-comprobante");
+    linkComprobante.href = `/boleta.html?tipo=pedido&id=${order.id}`;
+    linkComprobante.hidden = false;
 
     const tipoMedio = mediosPago.find((m) => m.id === Number(paymentMethodId))?.type;
     document.getElementById("form-checkout").hidden = true;

@@ -47,6 +47,13 @@ const SALE_CHANNELS = Object.freeze({
   PRESENCIAL: "PRESENCIAL",
 });
 
+// Como se vendio una linea de pedido/venta: por unidad suelta o por caja
+// cerrada (solo valido si el producto tiene unitsPerBox/boxPrice configurados).
+const SALE_TYPES = Object.freeze({
+  UNIDAD: "UNIDAD",
+  CAJA: "CAJA",
+});
+
 // Medios de pago soportados.
 const PAYMENT_METHOD_TYPES = Object.freeze({
   EFECTIVO: "EFECTIVO",
@@ -62,4 +69,5 @@ module.exports = {
   DELIVERY_MODES,
   SALE_CHANNELS,
   PAYMENT_METHOD_TYPES,
+  SALE_TYPES,
 };

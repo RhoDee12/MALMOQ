@@ -63,13 +63,13 @@ function renderPedido(order) {
       </div>
       <p class="small text-secondary mb-1">${new Date(order.createdAt).toLocaleString("es-PE")} - ${order.deliveryMode === "DELIVERY" ? "Delivery" : "Recojo en tienda"}</p>
       <ul class="small mb-2">
-        ${order.items.map((i) => `<li>${i.quantity} x ${escapeHtml(i.product.name)}</li>`).join("")}
+        ${order.items.map((i) => `<li>${i.quantity} x ${escapeHtml(i.product.name)} ${i.saleType === "CAJA" ? `<small class="text-secondary">(caja x${i.boxUnits})</small>` : ""}</li>`).join("")}
       </ul>
       <div class="d-flex justify-content-between">
         <span>Total</span>
         <strong>S/ ${order.total.toFixed(2)}</strong>
       </div>
-      ${order.receipt ? `<p class="small text-secondary mb-0">Comprobante: ${order.receipt.fullNumber}</p>` : ""}
+      ${order.receipt ? `<p class="small mb-0"><a href="/boleta.html?tipo=pedido&id=${order.id}" target="_blank">Ver comprobante (${order.receipt.fullNumber})</a></p>` : ""}
     </div>
   `;
 }

@@ -18,11 +18,12 @@ const ADMIN_MENU = [
   { section: "Catalogo" },
   { href: "/admin/productos.html", label: "Productos", icon: "🍾" },
   { href: "/admin/categorias.html", label: "Categorias", icon: "🏷️" },
-  { href: "/admin/inventario.html", label: "Inventario", icon: "📦" },
+  { href: "/admin/marcas.html", label: "Marcas", icon: "🏭" },
+  { href: "/admin/inventario.html", label: "Inventario", icon: "📦", permission: "canManageInventory" },
   { section: "Ventas" },
-  { href: "/admin/pedidos.html", label: "Pedidos online", icon: "🛒" },
-  { href: "/admin/ventas.html", label: "Ventas / POS", icon: "💵" },
-  { href: "/admin/clientes.html", label: "Clientes", icon: "👥" },
+  { href: "/admin/pedidos.html", label: "Pedidos online", icon: "🛒", permission: "canManageOrders" },
+  { href: "/admin/ventas.html", label: "Ventas / POS", icon: "💵", permission: "canRegisterSales" },
+  { href: "/admin/clientes.html", label: "Clientes", icon: "👥", permission: "canViewCustomers" },
   { section: "Contenido", jefeOnly: true },
   { href: "/admin/promociones.html", label: "Promociones", icon: "🎉", jefeOnly: true },
   { href: "/admin/banners.html", label: "Banners", icon: "🖼️", jefeOnly: true },
@@ -69,6 +70,7 @@ function renderAdminShell(user) {
 
   const menuHtml = ADMIN_MENU
     .filter((item) => !item.jefeOnly || user.role === "JEFE")
+    .filter((item) => !item.permission || user.role === "JEFE" || user.employeeProfile?.[item.permission])
     .map((item) => {
       if (item.section) return `<div class="nav-section-title">${item.section}</div>`;
       const active = currentPath === item.href ? "active" : "";

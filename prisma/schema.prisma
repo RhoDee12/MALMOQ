@@ -79,6 +79,12 @@ model Employee {
   canManageOrders    Boolean @default(true)
   canRegisterSales   Boolean @default(true)
   canViewCustomers   Boolean @default(false)
+  // Un pedido "confirmado" (Order.isLocked) ya no se puede tocar - ni
+  // siquiera cambiarle el estado - salvo el JEFE. Este permiso es la
+  // EXCEPCION que el jefe le puede dar a un empleado de confianza para que
+  // el tambien pueda editar pedidos ya confirmados. Por defecto false: un
+  // empleado nuevo NO puede editar ventas ya cerradas hasta que se lo den.
+  canEditConfirmedOrders Boolean @default(false)
 
   createdAt DateTime @default(now())
 }
@@ -112,9 +118,19 @@ model Product {
   description String?
   presentation String? // ej: "botella 750ml"
 
-  price           Float // precio de venta actual
+  price           Float // precio de venta actual (por UNIDAD)
   promoPrice      Float? // precio promocional, si aplica (debe ser < price)
   discountPercent Float? // alternativa: descuento en % en vez de precio fijo
+
+  // Venta por caja (opcional). Si ambos campos estan completos, el
+  // producto se puede vender tanto por unidad como por caja cerrada (ej:
+  // una gaseosa se vende suelta o en pack de 6, un vino botella por botella
+  // o por caja de 12). El stock SIEMPRE se cuenta en unidades sueltas
+  // (nunca en cajas) para que el inventario sea uno solo sin importar como
+  // se vendio; al vender/anular una caja se suma/resta unitsPerBox
+  // unidades de stock de una sola vez (ver src/services/stock.service.js).
+  unitsPerBox Int? // ej: 12 = una caja trae 12 unidades. null = no se vende por caja
+  boxPrice    Float? // precio de la caja completa. null = no se vende por caja
 
   stock       Int    @default(0)
   minStock    Int    @default(5) // debajo de esto se marca "stock bajo"
@@ -187,6 +203,14 @@ model Order {
 
   status String @default("PENDIENTE")
 
+  // Se activa con el boton "Confirmar venta" en el panel: significa que el
+  // pedido ya se entrego/cobro de verdad y queda cerrado. A partir de ahi
+  // solo el JEFE (o un empleado con canEditConfirmedOrders) puede seguir
+  // tocandolo - ver requireOrderEditable en auth.middleware.js.
+  isLocked   Boolean   @default(false)
+  lockedAt   DateTime?
+  lockedById Int?
+
   paymentMethodId Int
   paymentMethod   PaymentMethod @relation(fields: [paymentMethodId], references: [id])
 
@@ -209,14 +233,19 @@ model Order {
   updatedAt DateTime @updatedAt
 }
 
+// Valores validos de "saleType" (ver src/constants.js): UNIDAD | CAJA
 model OrderItem {
   id        Int     @id @default(autoincrement())
   orderId   Int
   order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   productId Int
   product   Product @relation(fields: [productId], references: [id])
-  quantity  Int
-  unitPrice Float // precio al momento de la compra (no cambia si el producto sube de precio despues)
+  saleType  String  @default("UNIDAD") // UNIDAD | CAJA - que se vendio en esta linea
+  quantity  Int // cantidad de UNIDADES o de CAJAS, segun saleType (no siempre botellas sueltas)
+  boxUnits  Int? // snapshot de unidades-por-caja usado en este momento (solo si saleType=CAJA;
+                 // se guarda aca para que si el jefe cambia unitsPerBox despues, esta linea
+                 // vieja no cambie de significado - mismo criterio que igvPercent en Order)
+  unitPrice Float // precio de UNA unidad o UNA caja (segun saleType) al momento de la compra
   subtotal  Float
 }
 
@@ -255,13 +284,16 @@ model Sale {
   createdAt DateTime @default(now())
 }
 
+// "saleType" y "boxUnits": mismo significado que en OrderItem (ver arriba).
 model SaleItem {
   id        Int     @id @default(autoincrement())
   saleId    Int
   sale      Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
   productId Int
   product   Product @relation(fields: [productId], references: [id])
+  saleType  String  @default("UNIDAD")
   quantity  Int
+  boxUnits  Int?
   unitPrice Float
   subtotal  Float
 }

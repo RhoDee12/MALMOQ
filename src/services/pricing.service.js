@@ -13,16 +13,21 @@
 // ============================================================================
 
 const prisma = require("../config/prisma");
-const { PAYMENT_METHOD_TYPES } = require("../constants");
+const AppError = require("../utils/AppError");
+const { PAYMENT_METHOD_TYPES, SALE_TYPES } = require("../constants");
 
 /**
- * Calcula el precio efectivo de un producto (usa el promocional si existe
- * y es menor al normal; si no, aplica el descuento por porcentaje; si no
- * tiene ninguno de los dos, usa el precio normal).
- * @param {{price:number, promoPrice:number|null, discountPercent:number|null}} product
+ * Calcula el precio efectivo de UNA unidad de venta (una botella suelta, o
+ * una caja cerrada segun "saleType"). El precio de caja es un precio fijo
+ * propio (no le aplican promoPrice/discountPercent, que son solo para la
+ * unidad suelta) - si se quiere ofrecer una caja en oferta, se edita
+ * directamente boxPrice.
+ * @param {{price:number, promoPrice:number|null, discountPercent:number|null, boxPrice:number|null}} product
+ * @param {string} [saleType] - SALE_TYPES.UNIDAD (default) o SALE_TYPES.CAJA
  * @returns {number}
  */
-function getEffectiveUnitPrice(product) {
+function getEffectiveUnitPrice(product, saleType = SALE_TYPES.UNIDAD) {
+  if (saleType === SALE_TYPES.CAJA) return product.boxPrice;
   if (product.promoPrice != null && product.promoPrice > 0 && product.promoPrice < product.price) {
     return product.promoPrice;
   }
@@ -33,11 +38,11 @@ function getEffectiveUnitPrice(product) {
 }
 
 /**
- * Calcula los totales de una lista de items (producto + cantidad), usando
- * la configuracion tributaria vigente (IGV) y, si el medio de pago es
- * tarjeta, la comision Pocket POS vigente en este momento.
+ * Calcula los totales de una lista de items (producto + cantidad + tipo de
+ * venta), usando la configuracion tributaria vigente (IGV) y, si el medio
+ * de pago es tarjeta, la comision Pocket POS vigente en este momento.
  *
- * @param {Array<{product: object, quantity: number}>} items - productos con su cantidad
+ * @param {Array<{product: object, quantity: number, saleType?: string}>} items - productos, cantidad y si se vendio por unidad o caja
  * @param {number} paymentMethodId - id del PaymentMethod elegido
  * @param {number} [deliveryCost] - costo de envio, si aplica (no lleva IGV aparte, se suma al final)
  * @returns {Promise<object>} totales calculados, listos para guardar en Order/Sale
@@ -49,13 +54,24 @@ async function calculateTotals(items, paymentMethodId, deliveryCost = 0) {
   // 1) Subtotal: suma de (precio efectivo x cantidad) de cada item.
   let subtotal = 0;
   let discountTotal = 0;
-  const lineItems = items.map(({ product, quantity }) => {
-    const unitPrice = getEffectiveUnitPrice(product);
+  const lineItems = items.map(({ product, quantity, saleType = SALE_TYPES.UNIDAD }) => {
+    if (saleType === SALE_TYPES.CAJA && (!product.unitsPerBox || !product.boxPrice)) {
+      throw new AppError(`"${product.name}" no esta configurado para venderse por caja.`);
+    }
+    const unitPrice = getEffectiveUnitPrice(product, saleType);
+    const listPrice = saleType === SALE_TYPES.CAJA ? product.boxPrice : product.price;
     const lineSubtotal = round2(unitPrice * quantity);
-    const lineDiscount = round2((product.price - unitPrice) * quantity);
-    subtotal += product.price * quantity;
+    const lineDiscount = round2((listPrice - unitPrice) * quantity);
+    subtotal += listPrice * quantity;
     discountTotal += lineDiscount;
-    return { productId: product.id, quantity, unitPrice, subtotal: lineSubtotal };
+    return {
+      productId: product.id,
+      quantity,
+      saleType,
+      boxUnits: saleType === SALE_TYPES.CAJA ? product.unitsPerBox : null,
+      unitPrice,
+      subtotal: lineSubtotal,
+    };
   });
   subtotal = round2(subtotal);
   discountTotal = round2(discountTotal);

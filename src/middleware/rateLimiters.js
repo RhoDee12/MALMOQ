@@ -22,6 +22,13 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { ok: false, message: "Demasiados intentos. Espera unos minutos e intenta de nuevo." },
+  // En desarrollo local, todo (el navegador del dueno de la tienda y
+  // cualquier herramienta de prueba) sale por la misma IP (localhost), asi
+  // que este limite se agota enseguida sin que haya ningun ataque real.
+  // Se desactiva fuera de "production" para no trabar el desarrollo; en
+  // produccion (NODE_ENV=production, ver .env) queda activo como defensa
+  // real contra fuerza bruta.
+  skip: () => process.env.NODE_ENV !== "production",
 });
 
 /**

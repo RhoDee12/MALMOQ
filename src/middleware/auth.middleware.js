@@ -79,4 +79,31 @@ function requireRole(...allowedRoles) {
   };
 }
 
-module.exports = { requireAuth, attachUserIfLogged, requireRole };
+/**
+ * Exige un permiso GRANULAR de empleado (ver modelo Employee: canManageProducts,
+ * canManageOrders, canRegisterSales, canViewCustomers, canEditConfirmedOrders,
+ * etc). El JEFE siempre pasa (tiene todos los permisos por definicion, no
+ * tiene fila en Employee). Un EMPLEADO sin ese permiso especifico recibe 403,
+ * aunque su rol general le alcance para entrar al panel.
+ *
+ * Debe usarse SIEMPRE despues de requireAuth. Uso:
+ *   router.put("/admin/pedidos/:id/estado", ...staffOnly, requireEmployeePermission("canManageOrders"), asyncHandler(ctrl.updateStatus))
+ */
+function requireEmployeePermission(permissionField) {
+  return async function (req, res, next) {
+    try {
+      if (!req.user) throw new AppError("Debes iniciar sesion para continuar.", 401);
+      if (req.user.role === "JEFE") return next(); // el jefe siempre tiene todos los permisos
+
+      const profile = await prisma.employee.findUnique({ where: { userId: req.user.id } });
+      if (!profile || !profile[permissionField]) {
+        throw new AppError("No tienes permiso para realizar esta accion. Pidele al jefe que te lo habilite.", 403);
+      }
+      next();
+    } catch (err) {
+      next(err.isAppError ? err : new AppError("No se pudo verificar tu permiso.", 403));
+    }
+  };
+}
+
+module.exports = { requireAuth, attachUserIfLogged, requireRole, requireEmployeePermission };

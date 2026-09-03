@@ -130,6 +130,8 @@ async function create(req, res) {
       price: Number(body.price),
       promoPrice: body.promoPrice != null && body.promoPrice !== "" ? Number(body.promoPrice) : null,
       discountPercent: body.discountPercent != null && body.discountPercent !== "" ? Number(body.discountPercent) : null,
+      unitsPerBox: body.unitsPerBox != null && body.unitsPerBox !== "" ? Number(body.unitsPerBox) : null,
+      boxPrice: body.boxPrice != null && body.boxPrice !== "" ? Number(body.boxPrice) : null,
       stock: Number(body.stock) || 0,
       minStock: Number(body.minStock) || 5,
       categoryId: Number(body.categoryId),
@@ -174,6 +176,8 @@ async function update(req, res) {
   if (body.price !== undefined) data.price = Number(body.price);
   if (body.promoPrice !== undefined) data.promoPrice = body.promoPrice === "" ? null : Number(body.promoPrice);
   if (body.discountPercent !== undefined) data.discountPercent = body.discountPercent === "" ? null : Number(body.discountPercent);
+  if (body.unitsPerBox !== undefined) data.unitsPerBox = body.unitsPerBox === "" ? null : Number(body.unitsPerBox);
+  if (body.boxPrice !== undefined) data.boxPrice = body.boxPrice === "" ? null : Number(body.boxPrice);
   if (body.minStock !== undefined) data.minStock = Number(body.minStock);
   if (body.categoryId !== undefined) data.categoryId = Number(body.categoryId);
   if (body.brandId !== undefined) data.brandId = body.brandId ? Number(body.brandId) : null;

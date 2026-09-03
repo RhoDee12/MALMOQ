@@ -6,7 +6,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   const user = await initAdminPage();
   if (!user) return;
   cargarIndicadores();
+  ocultarAccesosSinPermiso(user);
 });
+
+/** Oculta los botones de "Accesos rapidos" a los que este usuario no tiene permiso (mismo criterio que el menu lateral). */
+function ocultarAccesosSinPermiso(user) {
+  if (user.role === "JEFE") return;
+  const perm = user.employeeProfile || {};
+  document.getElementById("acceso-pedidos").hidden = !perm.canManageOrders;
+  document.getElementById("acceso-ventas").hidden = !perm.canRegisterSales;
+  document.getElementById("acceso-inventario").hidden = !perm.canManageInventory;
+}
 
 async function cargarIndicadores() {
   try {
