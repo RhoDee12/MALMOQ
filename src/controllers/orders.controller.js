@@ -11,8 +11,9 @@
 const prisma = require("../config/prisma");
 const AppError = require("../utils/AppError");
 const { calculateTotals } = require("../services/pricing.service");
+const { unitsFor } = require("../services/stock.service");
 const { createReceipt } = require("../services/receipt.service");
-const { ORDER_STATUSES, DELIVERY_MODES, SALE_CHANNELS, MOVEMENT_TYPES } = require("../constants");
+const { ORDER_STATUSES, DELIVERY_MODES, SALE_CHANNELS, MOVEMENT_TYPES, SALE_TYPES } = require("../constants");
 
 /**
  * POST /api/pedidos
@@ -56,7 +57,11 @@ async function create(req, res) {
     if (!Number.isInteger(quantity) || quantity <= 0) {
       throw new AppError(`Cantidad invalida para "${product.name}".`);
     }
-    return { product, quantity };
+    const saleType = i.saleType === SALE_TYPES.CAJA ? SALE_TYPES.CAJA : SALE_TYPES.UNIDAD;
+    if (saleType === SALE_TYPES.CAJA && (!product.unitsPerBox || !product.boxPrice)) {
+      throw new AppError(`"${product.name}" no esta disponible por caja.`);
+    }
+    return { product, quantity, saleType };
   });
 
   // Costo de delivery segun la zona elegida (si aplica).
@@ -75,10 +80,13 @@ async function create(req, res) {
   const order = await prisma.$transaction(async (tx) => {
     // 1) Verificar y descontar stock de forma atomica por cada producto.
     //    (mismo patron que stock.service.js: UPDATE condicional "stock >= cantidad")
-    for (const { product, quantity } of itemsWithProduct) {
+    //    Si la linea es por CAJA, se descuentan las unidades reales que trae
+    //    (quantity x unitsPerBox) - el stock siempre se cuenta en unidades sueltas.
+    for (const { product, quantity, saleType } of itemsWithProduct) {
+      const needed = unitsFor(quantity, saleType, product.unitsPerBox);
       const result = await tx.product.updateMany({
-        where: { id: product.id, stock: { gte: quantity } },
-        data: { stock: { decrement: quantity } },
+        where: { id: product.id, stock: { gte: needed } },
+        data: { stock: { decrement: needed } },
       });
       if (result.count === 0) {
         const fresh = await tx.product.findUnique({ where: { id: product.id } });
@@ -115,10 +123,13 @@ async function create(req, res) {
     const orderNumber = `PED-${String(createdOrder.id).padStart(6, "0")}`;
     await tx.order.update({ where: { id: createdOrder.id }, data: { orderNumber } });
 
-    // 3) Registrar el movimiento de inventario de cada producto (trazabilidad).
-    for (const { product, quantity } of itemsWithProduct) {
+    // 3) Registrar el movimiento de inventario de cada producto (trazabilidad,
+    //    siempre en unidades reales aunque se haya vendido por caja).
+    for (const { product, quantity, saleType } of itemsWithProduct) {
+      const needed = unitsFor(quantity, saleType, product.unitsPerBox);
+      const detalle = saleType === SALE_TYPES.CAJA ? ` (${quantity} caja x ${product.unitsPerBox})` : "";
       await tx.inventoryMovement.create({
-        data: { productId: product.id, type: MOVEMENT_TYPES.VENTA, quantity, reason: `Pedido ${orderNumber}`, userId: req.user.id },
+        data: { productId: product.id, type: MOVEMENT_TYPES.VENTA, quantity: needed, reason: `Pedido ${orderNumber}${detalle}`, userId: req.user.id },
       });
     }
 
@@ -139,7 +150,14 @@ async function create(req, res) {
         total: totals.total,
         paymentMethodId: Number(paymentMethodId),
         items: {
-          create: totals.lineItems.map((li) => ({ productId: li.productId, quantity: li.quantity, unitPrice: li.unitPrice, subtotal: li.subtotal })),
+          create: totals.lineItems.map((li) => ({
+            productId: li.productId,
+            saleType: li.saleType,
+            quantity: li.quantity,
+            boxUnits: li.boxUnits,
+            unitPrice: li.unitPrice,
+            subtotal: li.subtotal,
+          })),
         },
       },
     });
@@ -192,10 +210,20 @@ async function listAdmin(req, res) {
   if (req.query.estado) where.status = req.query.estado;
   const orders = await prisma.order.findMany({
     where,
-    include: { items: { include: { product: true } }, paymentMethod: true, user: { include: { customerProfile: true } } },
+    include: { items: { include: { product: true } }, paymentMethod: true, receipt: true, user: { include: { customerProfile: true } } },
     orderBy: { createdAt: "desc" },
   });
   res.json({ ok: true, orders });
+}
+
+/** Lanza 403 si el pedido esta confirmado (isLocked) y quien pide el cambio no tiene permiso para tocarlo igual. */
+async function assertOrderEditable(order, user) {
+  if (!order.isLocked) return;
+  if (user.role === "JEFE") return;
+  const profile = await prisma.employee.findUnique({ where: { userId: user.id } });
+  if (!profile || !profile.canEditConfirmedOrders) {
+    throw new AppError("Esta venta ya esta confirmada y cerrada. Solo el jefe (o un empleado con permiso) puede editarla.", 403);
+  }
 }
 
 /** PUT /api/admin/pedidos/:id/estado - cambia el estado de un pedido (empleado/jefe). */
@@ -206,11 +234,59 @@ async function updateStatus(req, res) {
 
   const before = await prisma.order.findUnique({ where: { id } });
   if (!before) throw new AppError("Pedido no encontrado.", 404);
+  await assertOrderEditable(before, req.user);
 
   const order = await prisma.order.update({ where: { id }, data: { status } });
 
   const { logActivity } = require("../services/activityLog.service");
   await logActivity({ userId: req.user.id, action: "ORDER_STATUS_CHANGE", entity: "Order", entityId: id, oldValue: { status: before.status }, newValue: { status } });
+
+  res.json({ ok: true, order });
+}
+
+/**
+ * PUT /api/admin/pedidos/:id/confirmar
+ * "Cierra" la venta: a partir de aca el pedido queda bloqueado (ver
+ * assertOrderEditable) y ya no se puede tocar salvo por el jefe o un
+ * empleado con el permiso canEditConfirmedOrders explicito.
+ */
+async function confirmOrder(req, res) {
+  const id = Number(req.params.id);
+  const before = await prisma.order.findUnique({ where: { id } });
+  if (!before) throw new AppError("Pedido no encontrado.", 404);
+  if (before.isLocked) throw new AppError("Esta venta ya estaba confirmada.");
+
+  const order = await prisma.order.update({
+    where: { id },
+    data: { isLocked: true, lockedAt: new Date(), lockedById: req.user.id },
+  });
+
+  const { logActivity } = require("../services/activityLog.service");
+  await logActivity({ userId: req.user.id, action: "ORDER_CONFIRM", entity: "Order", entityId: id });
+
+  res.json({ ok: true, order });
+}
+
+/**
+ * PUT /api/admin/pedidos/:id/desbloquear
+ * Reabre por completo un pedido que se confirmo por error. Reservado a
+ * JEFE unicamente (ver orders.routes.js) - un empleado con
+ * canEditConfirmedOrders puede EDITAR un pedido ya confirmado sin
+ * desbloquearlo (ver assertOrderEditable), pero no quitarle el candado del
+ * todo; eso queda como decision exclusiva del jefe.
+ */
+async function unlockOrder(req, res) {
+  const id = Number(req.params.id);
+  const before = await prisma.order.findUnique({ where: { id } });
+  if (!before) throw new AppError("Pedido no encontrado.", 404);
+
+  const order = await prisma.order.update({
+    where: { id },
+    data: { isLocked: false, lockedAt: null, lockedById: null },
+  });
+
+  const { logActivity } = require("../services/activityLog.service");
+  await logActivity({ userId: req.user.id, action: "ORDER_UNLOCK", entity: "Order", entityId: id });
 
   res.json({ ok: true, order });
 }
@@ -255,4 +331,4 @@ async function verifyPayment(req, res) {
   res.json({ ok: true, payment });
 }
 
-module.exports = { create, listMine, getById, listAdmin, updateStatus, attachPayment, verifyPayment };
+module.exports = { create, listMine, getById, listAdmin, updateStatus, confirmOrder, unlockOrder, attachPayment, verifyPayment };

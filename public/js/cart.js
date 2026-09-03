@@ -8,7 +8,10 @@
 // public/js/pages/checkout.js y src/controllers/orders.controller.js).
 //
 // Estructura guardada en localStorage["malmoq_carrito"]:
-//   [{ productId, name, imageUrl, unitPrice, quantity }, ...]
+//   [{ productId, name, imageUrl, unitPrice, quantity, saleType, unitsPerBox }, ...]
+// "saleType": "UNIDAD" (default) o "CAJA". Un mismo producto puede tener
+// dos lineas en el carrito (una por unidad y otra por caja) - se
+// identifican por productId+saleType, no solo por productId.
 // ============================================================================
 
 const CART_STORAGE_KEY = "malmoq_carrito";
@@ -29,13 +32,16 @@ function cartSaveItems(items) {
 }
 
 /**
- * Agrega un producto al carrito (o suma la cantidad si ya estaba).
- * @param {{id:number, name:string, imageUrl:string|null, effectivePrice:number}} product
+ * Agrega un producto al carrito (o suma la cantidad si ya estaba con el
+ * MISMO tipo de venta - una linea de unidad y una de caja del mismo
+ * producto se manejan por separado).
+ * @param {{id:number, name:string, imageUrl:string|null, effectivePrice:number, boxPrice?:number, unitsPerBox?:number}} product
  * @param {number} quantity
+ * @param {string} [saleType] - "UNIDAD" (default) o "CAJA"
  */
-function cartAddItem(product, quantity = 1) {
+function cartAddItem(product, quantity = 1, saleType = "UNIDAD") {
   const items = cartGetItems();
-  const existing = items.find((i) => i.productId === product.id);
+  const existing = items.find((i) => i.productId === product.id && (i.saleType || "UNIDAD") === saleType);
   if (existing) {
     existing.quantity += quantity;
   } else {
@@ -43,26 +49,28 @@ function cartAddItem(product, quantity = 1) {
       productId: product.id,
       name: product.name,
       imageUrl: product.imageUrl || null,
-      unitPrice: product.effectivePrice,
+      unitPrice: saleType === "CAJA" ? product.boxPrice : product.effectivePrice,
       quantity,
+      saleType,
+      unitsPerBox: saleType === "CAJA" ? product.unitsPerBox : null,
     });
   }
   cartSaveItems(items);
 }
 
-function cartSetQuantity(productId, quantity) {
+function cartSetQuantity(productId, quantity, saleType = "UNIDAD") {
   let items = cartGetItems();
   if (quantity <= 0) {
-    items = items.filter((i) => i.productId !== productId);
+    items = items.filter((i) => !(i.productId === productId && (i.saleType || "UNIDAD") === saleType));
   } else {
-    const item = items.find((i) => i.productId === productId);
+    const item = items.find((i) => i.productId === productId && (i.saleType || "UNIDAD") === saleType);
     if (item) item.quantity = quantity;
   }
   cartSaveItems(items);
 }
 
-function cartRemoveItem(productId) {
-  const items = cartGetItems().filter((i) => i.productId !== productId);
+function cartRemoveItem(productId, saleType = "UNIDAD") {
+  const items = cartGetItems().filter((i) => !(i.productId === productId && (i.saleType || "UNIDAD") === saleType));
   cartSaveItems(items);
 }
 

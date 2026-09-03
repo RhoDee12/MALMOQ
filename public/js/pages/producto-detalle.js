@@ -21,6 +21,7 @@ async function cargarProducto() {
 
     const tienePromo = p.effectivePrice < p.price;
     const sinStock = p.stock <= 0;
+    const vendePorCaja = !!(p.unitsPerBox && p.boxPrice);
     const imagen = p.imageUrl || "/img/placeholder-producto.svg";
 
     cont.innerHTML = `
@@ -37,9 +38,10 @@ async function cargarProducto() {
           <h1 class="font-black">${escapeHtml(p.name)}</h1>
           <p class="text-secondary">${escapeHtml(p.category?.name || "")} ${p.presentation ? "&middot; " + escapeHtml(p.presentation) : ""}</p>
 
-          <div class="mb-3">
+          <div class="mb-3" id="bloque-precio">
             <span class="precio-actual fs-2">S/ ${p.effectivePrice.toFixed(2)}</span>
             ${tienePromo ? `<span class="precio-tachado fs-5">S/ ${p.price.toFixed(2)}</span>` : ""}
+            <span class="small text-secondary d-block" id="precio-unidad-label">por unidad</span>
           </div>
 
           ${p.description ? `<p>${escapeHtml(p.description)}</p>` : ""}
@@ -47,6 +49,18 @@ async function cargarProducto() {
           <p class="small ${sinStock ? "text-danger" : "text-success"}">
             ${sinStock ? "Sin stock por el momento" : `Disponible (${p.stock} unidades)`}
           </p>
+
+          ${vendePorCaja && !sinStock ? `
+            <div class="mb-3">
+              <label class="form-label mb-1 small">Se vende como:</label>
+              <div class="btn-group d-block" role="group">
+                <input type="radio" class="btn-check" name="tipo-venta" id="tipo-unidad" value="UNIDAD" checked>
+                <label class="btn btn-outline-secondary btn-sm" for="tipo-unidad">Por unidad (S/ ${p.effectivePrice.toFixed(2)})</label>
+                <input type="radio" class="btn-check" name="tipo-venta" id="tipo-caja" value="CAJA">
+                <label class="btn btn-outline-secondary btn-sm" for="tipo-caja">Por caja x${p.unitsPerBox} (S/ ${p.boxPrice.toFixed(2)})</label>
+              </div>
+            </div>
+          ` : ""}
 
           <div class="d-flex align-items-center gap-2 mb-3" ${sinStock ? "hidden" : ""}>
             <label class="form-label mb-0 small">Cantidad:</label>
@@ -61,9 +75,29 @@ async function cargarProducto() {
     `;
 
     if (!sinStock) {
+      // El maximo de "Cantidad" cambia segun se eligio Unidad o Caja
+      // (si eliges Caja, el stock disponible en cajas es menor).
+      const inputCantidad = document.getElementById("input-cantidad");
+      function actualizarMaximoCantidad() {
+        const tipo = document.querySelector('input[name="tipo-venta"]:checked')?.value || "UNIDAD";
+        const maxCantidad = tipo === "CAJA" ? Math.floor(p.stock / p.unitsPerBox) : p.stock;
+        inputCantidad.max = Math.max(1, maxCantidad);
+        if (Number(inputCantidad.value) > maxCantidad) inputCantidad.value = Math.max(1, maxCantidad);
+
+        const bloquePrecio = document.getElementById("bloque-precio");
+        bloquePrecio.querySelector(".precio-actual").textContent = `S/ ${(tipo === "CAJA" ? p.boxPrice : p.effectivePrice).toFixed(2)}`;
+        document.getElementById("precio-unidad-label").textContent = tipo === "CAJA" ? `por caja (${p.unitsPerBox} unidades)` : "por unidad";
+      }
+      if (vendePorCaja) {
+        document.querySelectorAll('input[name="tipo-venta"]').forEach((r) => r.addEventListener("change", actualizarMaximoCantidad));
+      }
+
       document.getElementById("btn-agregar-carrito").addEventListener("click", () => {
-        const cantidad = Math.max(1, Math.min(p.stock, Number(document.getElementById("input-cantidad").value) || 1));
-        cartAddItem(p, cantidad);
+        const tipo = document.querySelector('input[name="tipo-venta"]:checked')?.value || "UNIDAD";
+        const maxCantidad = tipo === "CAJA" ? Math.floor(p.stock / p.unitsPerBox) : p.stock;
+        if (tipo === "CAJA" && maxCantidad < 1) return mostrarToast("No hay stock suficiente para una caja completa.", true);
+        const cantidad = Math.max(1, Math.min(maxCantidad, Number(inputCantidad.value) || 1));
+        cartAddItem(p, cantidad, tipo);
         mostrarToast(`"${p.name}" se agrego al carrito.`);
       });
     }

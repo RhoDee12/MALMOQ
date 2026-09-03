@@ -22,6 +22,7 @@ async function cargarEmpleados() {
     const permisosActivos = [
       perm?.canManageProducts && "Productos", perm?.canManageInventory && "Inventario",
       perm?.canManageOrders && "Pedidos", perm?.canRegisterSales && "Ventas", perm?.canViewCustomers && "Clientes",
+      perm?.canEditConfirmedOrders && "Editar pedidos confirmados",
     ].filter(Boolean).join(", ") || "Sin permisos";
 
     return `
@@ -66,6 +67,7 @@ function abrirModalEditarEmpleado(id) {
   document.getElementById("e-perm-pedidos").checked = !!perm?.canManageOrders;
   document.getElementById("e-perm-ventas").checked = !!perm?.canRegisterSales;
   document.getElementById("e-perm-clientes").checked = !!perm?.canViewCustomers;
+  document.getElementById("e-perm-editar-confirmados").checked = !!perm?.canEditConfirmedOrders;
 
   document.getElementById("modal-empleado-titulo").textContent = "Editar empleado";
   document.getElementById("grupo-password-nuevo").hidden = true;
@@ -83,6 +85,7 @@ async function guardarEmpleado(e) {
     canManageOrders: document.getElementById("e-perm-pedidos").checked,
     canRegisterSales: document.getElementById("e-perm-ventas").checked,
     canViewCustomers: document.getElementById("e-perm-clientes").checked,
+    canEditConfirmedOrders: document.getElementById("e-perm-editar-confirmados").checked,
   };
 
   try {

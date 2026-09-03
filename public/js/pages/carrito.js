@@ -29,15 +29,15 @@ function renderCarrito() {
       <td>
         <div class="d-flex align-items-center gap-2">
           <img src="${item.imageUrl || "/img/placeholder-producto.svg"}" class="carrito-item">
-          <span>${escapeHtml(item.name)}</span>
+          <span>${escapeHtml(item.name)} ${item.saleType === "CAJA" ? `<span class="badge bg-secondary">caja x${item.unitsPerBox}</span>` : ""}</span>
         </div>
       </td>
       <td>S/ ${item.unitPrice.toFixed(2)}</td>
       <td style="max-width:110px;">
-        <input type="number" min="1" value="${item.quantity}" class="form-control form-control-sm input-cantidad-carrito" data-id="${item.productId}">
+        <input type="number" min="1" value="${item.quantity}" class="form-control form-control-sm input-cantidad-carrito" data-id="${item.productId}" data-tipo="${item.saleType || "UNIDAD"}">
       </td>
       <td>S/ ${(item.unitPrice * item.quantity).toFixed(2)}</td>
-      <td><button class="btn btn-sm btn-outline-danger btn-quitar-item" data-id="${item.productId}">&times;</button></td>
+      <td><button class="btn btn-sm btn-outline-danger btn-quitar-item" data-id="${item.productId}" data-tipo="${item.saleType || "UNIDAD"}">&times;</button></td>
     </tr>
   `).join("");
 
@@ -45,14 +45,14 @@ function renderCarrito() {
 
   document.querySelectorAll(".input-cantidad-carrito").forEach((input) => {
     input.addEventListener("change", () => {
-      cartSetQuantity(Number(input.dataset.id), Math.max(1, Number(input.value) || 1));
+      cartSetQuantity(Number(input.dataset.id), Math.max(1, Number(input.value) || 1), input.dataset.tipo);
       renderCarrito();
       verificarDisponibilidad();
     });
   });
   document.querySelectorAll(".btn-quitar-item").forEach((btn) => {
     btn.addEventListener("click", () => {
-      cartRemoveItem(Number(btn.dataset.id));
+      cartRemoveItem(Number(btn.dataset.id), btn.dataset.tipo);
       renderCarrito();
     });
   });
@@ -67,7 +67,7 @@ async function verificarDisponibilidad() {
   try {
     const { disponible, problemas } = await apiFetch("/carrito/verificar", {
       method: "POST",
-      body: { items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })) },
+      body: { items: items.map((i) => ({ productId: i.productId, quantity: i.quantity, saleType: i.saleType || "UNIDAD" })) },
     });
 
     if (!disponible) {

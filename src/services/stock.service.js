@@ -18,7 +18,20 @@
 
 const prisma = require("../config/prisma");
 const AppError = require("../utils/AppError");
-const { MOVEMENT_TYPES } = require("../constants");
+const { MOVEMENT_TYPES, SALE_TYPES } = require("../constants");
+
+/**
+ * El stock de un producto SIEMPRE se cuenta en unidades sueltas, nunca en
+ * cajas (ver comentario en Product.unitsPerBox del schema). Esta funcion
+ * traduce "cuantas unidades de venta" (botellas o cajas) a "cuantas
+ * unidades de stock" reales se necesitan/mueven.
+ * @param {number} quantity - cantidad de UNIDADES o de CAJAS
+ * @param {string} saleType - SALE_TYPES.UNIDAD o SALE_TYPES.CAJA
+ * @param {number|null} unitsPerBox - unidades que trae una caja de ese producto
+ */
+function unitsFor(quantity, saleType, unitsPerBox) {
+  return saleType === SALE_TYPES.CAJA ? quantity * (unitsPerBox || 0) : quantity;
+}
 
 /**
  * Verifica (sin descontar) si hay stock suficiente de una lista de items.
@@ -26,19 +39,21 @@ const { MOVEMENT_TYPES } = require("../constants");
  * ya no esta disponible - pero el descuento real y la verificacion final
  * SIEMPRE vuelven a ocurrir en decrementStockForSale, al confirmar la compra.
  *
- * @param {Array<{productId:number, quantity:number}>} items
+ * @param {Array<{productId:number, quantity:number, saleType?:string}>} items
  * @returns {Promise<Array<{productId:number, name:string, requested:number, available:number}>>}
  *          lista de items CON problema de stock (vacia si todo esta bien)
  */
 async function findInsufficientStock(items) {
   const problems = [];
   for (const item of items) {
+    const saleType = item.saleType || SALE_TYPES.UNIDAD;
     const product = await prisma.product.findUnique({ where: { id: item.productId } });
     if (!product || !product.isActive) {
       problems.push({ productId: item.productId, name: product?.name ?? "producto", requested: item.quantity, available: 0 });
       continue;
     }
-    if (product.stock < item.quantity) {
+    const needed = unitsFor(item.quantity, saleType, product.unitsPerBox);
+    if (product.stock < needed) {
       problems.push({ productId: item.productId, name: product.name, requested: item.quantity, available: product.stock });
     }
   }
@@ -58,17 +73,20 @@ async function findInsufficientStock(items) {
 async function decrementStockForSale(items, context) {
   await prisma.$transaction(async (tx) => {
     for (const item of items) {
+      const saleType = item.saleType || SALE_TYPES.UNIDAD;
+      const product = await tx.product.findUnique({ where: { id: item.productId } });
+      const needed = unitsFor(item.quantity, saleType, product?.unitsPerBox);
+
       // updateMany con condicion "stock >= cantidad" en el WHERE: es la
       // parte clave que evita vender de mas si hay pedidos simultaneos.
       const result = await tx.product.updateMany({
-        where: { id: item.productId, stock: { gte: item.quantity } },
-        data: { stock: { decrement: item.quantity } },
+        where: { id: item.productId, stock: { gte: needed } },
+        data: { stock: { decrement: needed } },
       });
 
       if (result.count === 0) {
         // O el producto no existe, o ya no tenia suficiente stock: se
         // averigua cual para dar un mensaje util, y se aborta todo.
-        const product = await tx.product.findUnique({ where: { id: item.productId } });
         const available = product ? product.stock : 0;
         const name = product ? product.name : `producto #${item.productId}`;
         throw new AppError(
@@ -77,12 +95,13 @@ async function decrementStockForSale(items, context) {
         );
       }
 
-      // Se registra el movimiento de inventario para trazabilidad/auditoria.
+      // Se registra el movimiento de inventario para trazabilidad/auditoria
+      // (siempre en unidades reales, aunque se haya vendido por caja).
       await tx.inventoryMovement.create({
         data: {
           productId: item.productId,
           type: MOVEMENT_TYPES.VENTA,
-          quantity: item.quantity,
+          quantity: needed,
           reason: context.reason ?? "Venta",
           userId: context.userId ?? null,
           saleId: context.saleId ?? null,
@@ -92,4 +111,4 @@ async function decrementStockForSale(items, context) {
   });
 }
 
-module.exports = { findInsufficientStock, decrementStockForSale };
+module.exports = { findInsufficientStock, decrementStockForSale, unitsFor };
